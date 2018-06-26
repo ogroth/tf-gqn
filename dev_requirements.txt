@@ -1,0 +1,7 @@
+astroid==1.6.3
+isort==4.3.4
+lazy-object-proxy==1.3.1
+mccabe==0.6.1
+pylint==1.8.4
+rope==0.10.7
+wrapt==1.10.11

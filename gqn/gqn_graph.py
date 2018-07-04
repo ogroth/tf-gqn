@@ -178,16 +178,33 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
     return new_output, new_state
 
 
-def generator_rnn(cell, poses, representations, sequence_size=12,
+def generator_rnn(poses, representations, sequence_size=12,
                   scope="GeneratorRNN"):
   batch = tf.shape(representations)[0]
   height, width = tf.shape(representations)[1], tf.shape(representations)[2]
-  poses = _broadcast_poses(poses, height, width)
 
-  inputs = tf.concat([poses, representations], axis=-1)
+  cell = GeneratorLSTMCell(
+    [height, width, _GENERATOR_INPUT_CHANNELS], _LSTM_OUTPUT_CHANNELS,
+    _LSTM_CANVAS_CHANNELS, _LSTM_KERNEL_SIZE, name="GeneratorCell")
 
-  outputs, _ = tf.nn.static_rnn(cell, sequence_size * [inputs],
-                                dtype=tf.float32)
+  outputs = []
+  with tf.variable_scope(scope) as varscope:
+    if not tf.executing_eagerly():
+      if varscope.caching_device is None:
+        varscope.set_caching_device(lambda op: op.device)
+
+    poses = _broadcast_poses(poses, height, width)
+    inputs = tf.concat([poses, representations], axis=-1)
+    state = cell.zero(batch, tf.float32)
+
+    for time in range(sequence_size):
+      if time > 0:
+        varscope.reuse_variables()
+
+      z = _sample_z(state[1].h, scope="ita_pi")
+      (output, state) = cell(tf.concat([inputs, z], axis=-1), state)
+
+      outputs.append(output)
 
   return outputs[-1][0]
 

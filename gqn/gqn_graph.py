@@ -18,6 +18,11 @@ from __future__ import print_function
 import tensorflow as tf
 
 
+_LSTM_OUTPUT_CHANNELS = 256
+_LSTM_CANVAS_CHANNELS = 256
+_LSTM_KERNEL_SIZE = 5
+
+
 def _broadcast_poses(poses, height, width):
   with tf.control_dependencies([tf.assert_rank(poses, 2)]):  # (batch, 7)
     poses = tf.reshape(poses, [-1, 1, 1, 7])
@@ -72,8 +77,9 @@ def pool_encoder(images, poses, scope="PoolEncoder"):
 
 
 # TODO(stefan,ogroth): implement ita_g -> (mu, sigma) -> z_sample
-def _sample_z(h):
-  return h
+def _sample_z(h, scope=None):
+  with tf.variable_scope(scope):
+    return tf.identity(h)
 
 
 class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
@@ -139,31 +145,30 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
   def call(self, inputs, state, scope=None):
     """
-    :param inputs: concatenated pose and representation7
+    :param inputs: concatenated pose, representation, and noise z
     :param state: side (u), cell (c), and hidden (h) states
     :param scope:
     :return:
     """
     # TODO(stefan,ogroth): come up with a better name for u)
     side_state, (cell_state, hidden_state) = state
-    z = _sample_z(hidden_state)
-
-    sub_inputs = tf.concat([inputs, z], axis=-1)
     sub_state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
 
     # run the ConvLSTMCell
-    sub_output, new_sub_state = self._conv_cell(sub_inputs, sub_state)
+    sub_output, new_sub_state = self._conv_cell(inputs, sub_state)
 
     # upscale the output and add it to u (the side state)
     output = side_state + tf.layers.conv2d_transpose(
       sub_output, filters=self._side_state_channels, kernel_size=4, strides=4)
 
+    new_output = (output, sub_output)
     new_state = (output, new_sub_state)
 
-    return output, new_state
+    return new_output, new_state
 
 
-def generator_rnn(cell, poses, representations, sequence_size=12):
+def generator_rnn(cell, poses, representations, sequence_size=12,
+                  scope="GeneratorRNN"):
   batch = tf.shape(representations)[0]
   height, width = tf.shape(representations)[1], tf.shape(representations)[2]
   poses = _broadcast_poses(poses, height, width)
@@ -173,7 +178,54 @@ def generator_rnn(cell, poses, representations, sequence_size=12):
   outputs, _ = tf.nn.static_rnn(cell, sequence_size * [inputs],
                                 dtype=tf.float32)
 
-  return outputs[-1]
+  return outputs[-1][0]
+
+
+def inference_rnn(poses, representations,
+                  sequence_size=12, scope="InferenceRNN"):
+
+  input_shape = [tf.shape(representations)[1], tf.shape(representations)[2]]
+
+  inference_cell = tf.contrib.rnn.Conv2DLSTMCell(
+    input_shape, _LSTM_OUTPUT_CHANNELS, [_LSTM_KERNEL_SIZE, _LSTM_KERNEL_SIZE],
+    name="InferenceCell")
+
+  generator_cell = GeneratorLSTMCell(
+    input_shape, _LSTM_OUTPUT_CHANNELS, _LSTM_CANVAS_CHANNELS,
+    _LSTM_KERNEL_SIZE, name="GeneratorCell")
+
+  outputs = []
+  with tf.variable_scope(scope) as varscope:
+    if not tf.executing_eagerly():
+      if varscope.caching_device is None:
+        varscope.set_caching_device(lambda op: op.device)
+
+    batch = tf.shape(representations)[0]
+    height, width = tf.shape(representations)[1], tf.shape(representations)[2]
+    poses = _broadcast_poses(poses, height, width)
+
+    inputs = tf.concat([poses, representations], axis=-1)
+
+    inf_state = inference_cell.zero_state(batch, tf.float32)
+    gen_state = generator_cell.zero(batch, tf.float32)
+
+    for time in range(sequence_size):
+      if time > 0:
+        varscope.reuse_variables()
+
+      # TODO(stefan,ogroth): we need x^q, u^l
+      inf_input = inputs
+
+      z = _sample_z(inf_state.h, scope="ita_q")
+      gen_input = tf.concat([inputs, z], axis=-1)
+
+      # TODO(stefan,ogroth): how do you actually use the inference hidden state?
+      inf_state[1].h += gen_state[1].h
+
+      (inf_output, inf_state) = inference_cell(inf_input, inf_state)
+      (gen_output, gen_state) = generator_cell(gen_input, gen_state)
+
+  return None
 
 
 def gqn(images, poses, scope="GQN"):

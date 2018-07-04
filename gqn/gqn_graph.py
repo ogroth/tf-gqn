@@ -102,7 +102,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
   def __init__(self,
                input_shape,
                output_channels,
-               side_state_channels,
+               canvas_channels,
                kernel_size=5,
                use_bias=True,
                forget_bias=1.0,
@@ -140,11 +140,11 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
-    side_state_size = tf.TensorShape(
-      map(lambda x: 4 * x, input_shape[:-1]) + [side_state_channels])
-    self._side_state_channels = side_state_channels
-    self._output_size = side_state_size
-    self._state_size = (side_state_size, self._conv_cell.state_size)
+    canvas_size = tf.TensorShape(
+      map(lambda x: 4 * x, input_shape[:-1]) + [canvas_channels])
+    self._side_state_channels = canvas_channels
+    self._output_size = (canvas_size, self._conv_cell.output_size)
+    self._state_size = (canvas_size, self._conv_cell.state_size)
 
   @property
   def output_size(self):
@@ -157,23 +157,22 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
   def call(self, inputs, state, scope=None):
     """
     :param inputs: concatenated pose, representation, and noise z
-    :param state: side (u), cell (c), and hidden (h) states
+    :param state: canvas (u), cell (c), and hidden (h) states
     :param scope:
     :return:
     """
-    # TODO(stefan,ogroth): come up with a better name for u)
-    side_state, (cell_state, hidden_state) = state
+    canvas, (cell_state, hidden_state) = state
     sub_state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
 
     # run the ConvLSTMCell
     sub_output, new_sub_state = self._conv_cell(inputs, sub_state)
 
     # upscale the output and add it to u (the side state)
-    output = side_state + tf.layers.conv2d_transpose(
+    new_canvas = canvas + tf.layers.conv2d_transpose(
       sub_output, filters=self._side_state_channels, kernel_size=4, strides=4)
 
-    new_output = (output, sub_output)
-    new_state = (output, new_sub_state)
+    new_output = (new_canvas, sub_output)
+    new_state = (new_canvas, new_sub_state)
 
     return new_output, new_state
 

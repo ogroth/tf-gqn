@@ -88,10 +88,24 @@ def pool_encoder(images, poses, scope="PoolEncoder"):
   return net, endpoints
 
 
-# TODO(stefan,ogroth): implement ita_g -> (mu, sigma) -> z_sample
-def _sample_z(h, scope=None):
+def _ita(h, kernel_size=5, scope=None):
   with tf.variable_scope(scope):
-    return tf.identity(h)
+    # TODO(stefan,ogroth): what's the activation function??
+    ita = tf.layers.conv2d(h, filters=2 * _Z_CHANNELS, kernel_size=kernel_size,
+                           padding='SAME')
+    mu, sigma = tf.split(ita, num_or_size_splits=2, axis=-1)
+
+    return mu, sigma
+
+
+def _sample_z(h, kernel_size=5, scope=None):
+  mu, sigma = _ita(h, kernel_size, scope)
+
+  with tf.variable_scope(scope):
+    z_shape = tf.shape(h).as_list()[:-1] + [_Z_CHANNELS]
+    z = mu + tf.multiply(sigma, tf.random_normal(shape=z_shape))
+
+    return z
 
 
 class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):

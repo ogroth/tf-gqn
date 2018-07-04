@@ -18,9 +18,21 @@ from __future__ import print_function
 import tensorflow as tf
 
 
+# constants
+_POSE_CHANNELS = 7
+
+# hyper-parameters
 _LSTM_OUTPUT_CHANNELS = 256
 _LSTM_CANVAS_CHANNELS = 256
 _LSTM_KERNEL_SIZE = 5
+
+_Z_CHANNELS = 64
+_REPRESENTATION_CHANNELS = 256
+
+_GENERATOR_INPUT_CHANNELS = _POSE_CHANNELS + _REPRESENTATION_CHANNELS + \
+                            _Z_CHANNELS
+
+_INFERENCE_INPUT_CHANNELS = _POSE_CHANNELS + _REPRESENTATION_CHANNELS
 
 
 def _broadcast_poses(poses, height, width):
@@ -87,7 +99,6 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
   """GeneratorLSTMCell wrapper that upscales output with a deconvolution and
      adds it to a side input."""
 
-  # TODO(stefan,ogroth): should output_channels == side_state_channels?
   def __init__(self,
                input_shape,
                output_channels,
@@ -181,18 +192,21 @@ def generator_rnn(cell, poses, representations, sequence_size=12,
   return outputs[-1][0]
 
 
-def inference_rnn(poses, representations,
-                  sequence_size=12, scope="InferenceRNN"):
+def inference_rnn(poses, representations, sequence_size=12,
+                  scope="InferenceRNN"):
 
-  input_shape = [tf.shape(representations)[1], tf.shape(representations)[2]]
+  batch = tf.shape(representations)[0]
+  height, width = tf.shape(representations)[1], tf.shape(representations)[2]
 
+  # TODO(stefan,ogroth): how are variables shared between inference and
+  #                      generator?
   inference_cell = tf.contrib.rnn.Conv2DLSTMCell(
-    input_shape, _LSTM_OUTPUT_CHANNELS, [_LSTM_KERNEL_SIZE, _LSTM_KERNEL_SIZE],
-    name="InferenceCell")
+    [height, width, _INFERENCE_INPUT_CHANNELS], _LSTM_OUTPUT_CHANNELS,
+    [_LSTM_KERNEL_SIZE, _LSTM_KERNEL_SIZE], name="InferenceCell")
 
   generator_cell = GeneratorLSTMCell(
-    input_shape, _LSTM_OUTPUT_CHANNELS, _LSTM_CANVAS_CHANNELS,
-    _LSTM_KERNEL_SIZE, name="GeneratorCell")
+    [height, width, _GENERATOR_INPUT_CHANNELS], _LSTM_OUTPUT_CHANNELS,
+    _LSTM_CANVAS_CHANNELS, _LSTM_KERNEL_SIZE, name="GeneratorCell")
 
   outputs = []
   with tf.variable_scope(scope) as varscope:
@@ -200,10 +214,7 @@ def inference_rnn(poses, representations,
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
 
-    batch = tf.shape(representations)[0]
-    height, width = tf.shape(representations)[1], tf.shape(representations)[2]
     poses = _broadcast_poses(poses, height, width)
-
     inputs = tf.concat([poses, representations], axis=-1)
 
     inf_state = inference_cell.zero_state(batch, tf.float32)
@@ -225,7 +236,9 @@ def inference_rnn(poses, representations,
       (inf_output, inf_state) = inference_cell(inf_input, inf_state)
       (gen_output, gen_state) = generator_cell(gen_input, gen_state)
 
-  return None
+      outputs.append((inf_output, gen_output))
+
+  return outputs
 
 
 def gqn(images, poses, scope="GQN"):

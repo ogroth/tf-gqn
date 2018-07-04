@@ -84,7 +84,7 @@ if __name__ == '__main__':
   r_encoder_batch = tf.reshape(
       r_encoder_batch,
       shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, 256]) # TODO(ogroth): parameterize reshape!
-  r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data point
+  r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data tuple
 
   # loss function
   # STUB

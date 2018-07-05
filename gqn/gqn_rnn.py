@@ -103,15 +103,15 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     conv_outputs = []
     for k in inputs:
       conv_outputs.append(
-        tf.layers.conv2d(
-            inputs[k],
-            filters=4 * self._output_channels,
-            kernel_size=self._kernel_size,
-            strides=1,
-            padding='SAME',
-            use_bias=self._use_bias,
-            activation=None,
-            name="{}_LSTMConv".format(k))
+          tf.layers.conv2d(
+              inputs[k],
+              filters=4 * self._output_channels,
+              kernel_size=self._kernel_size,
+              strides=1,
+              padding='SAME',
+              use_bias=self._use_bias,
+              activation=None,
+              name="{}_LSTMConv".format(k))
       )
     result = reduce(lambda conv1, conv2: tf.add(conv1, conv2), conv_outputs)
 
@@ -159,13 +159,12 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
       raise ValueError("Invalid input_shape {}.".format(input_shape))
 
     self._gqn_cell = GQNLSTMCell(
-      input_shape, output_channels, kernel_size, use_bias, forget_bias,
-      hidden_state_name="h_g", name="{}_GQNCell".format(name))
+        input_shape, output_channels, kernel_size, use_bias, forget_bias,
+        hidden_state_name="h_g", name="{}_GQNCell".format(name))
 
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
-    canvas_size = tf.TensorShape(
-      [4 * x for x in input_shape[:-1]] + [canvas_channels])
+    canvas_size = tf.TensorShape([4 * x for x in input_shape[:-1]] + [canvas_channels])
     self._canvas_channels = canvas_channels
     self._output_size = _GeneratorCellOutput(canvas_size,
                                              self._gqn_cell.output_size)
@@ -194,7 +193,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
     # upscale the output and add it to u (the side state)
     new_canvas = canvas + tf.layers.conv2d_transpose(
-      sub_output, filters=self._canvas_channels, kernel_size=4, strides=4)
+        sub_output, filters=self._canvas_channels, kernel_size=4, strides=4)
 
     new_output = _GeneratorCellOutput(new_canvas, sub_output)
     new_state = _GeneratorCellState(new_canvas, new_sub_state)
@@ -241,8 +240,8 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
       raise ValueError("Invalid input_shape {}.".format(input_shape))
 
     self._gqn_cell = GQNLSTMCell(
-      input_shape, output_channels, kernel_size, use_bias, forget_bias,
-      hidden_state_name='h_e', name="{}_GQNCell".format(name))
+        input_shape, output_channels, kernel_size, use_bias, forget_bias,
+        hidden_state_name='h_e', name="{}_GQNCell".format(name))
 
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
@@ -273,10 +272,10 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
     # TODO(stefan,ogroth): actually, this could just be another input, what
     #                      is the right thing to do?
     # downscale the query image and canvas to add it to the hidden state
-    input_canvas_and_image = \
-      tf.layers.conv2d(tf.concat([query_image, canvas], axis=-1),
-                       filters=self.output_size[-1], kernel_size=4, strides=4,
-                       padding='VALID', use_bias=False)
+    input_canvas_and_image = tf.layers.conv2d(
+        tf.concat([query_image, canvas], axis=-1),
+        filters=self.output_size[-1], kernel_size=4, strides=4,
+        padding='VALID', use_bias=False)
     hidden_state += input_canvas_and_image
 
     state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
@@ -333,16 +332,17 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
   #                      generator?
 
   generator_cell = GeneratorLSTMCell(
-    [height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
-    PARAMS.LSTM_OUTPUT_CHANNELS,
-    PARAMS.LSTM_CANVAS_CHANNELS,
-    PARAMS.LSTM_KERNEL_SIZE, name="Cell")
+      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="GeneratorCell")
 
   inference_cell = InferenceLSTMCell(
-    [height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
-    PARAMS.LSTM_OUTPUT_CHANNELS,
-    PARAMS.LSTM_KERNEL_SIZE,
-    name="Cell")
+      input_shape=[height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="InferenceCell")
 
   outputs = []
   with tf.variable_scope(scope) as varscope:
@@ -360,8 +360,8 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
         varscope.reuse_variables()
 
       inf_input = _InferenceCellInput(
-        representations, query_poses, query_images, gen_state.canvas,
-        gen_state.lstm.h)
+          representations, query_poses, query_images, gen_state.canvas,
+          gen_state.lstm.h)
 
       z = sample_z(inf_state.h, scope="ita_q")
       gen_input = _GeneratorCellInput(representations, query_poses, z)

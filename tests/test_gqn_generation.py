@@ -35,6 +35,7 @@ with tf.Session() as sess:
   feed_dict = {
       query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
       scene_representation : np.random.rand(_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C),
-  }  
+  }
   c = sess.run(canvas,feed_dict=feed_dict)
   print(c)
+  print(c.shape)

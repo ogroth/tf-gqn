@@ -1,5 +1,5 @@
 """
-Quick test script to check graph definition of GQN.
+Quick test script to check graph definition of full GQN model.
 """
 
 import tensorflow as tf

@@ -25,8 +25,8 @@ scene_representation = tf.placeholder(
 
 # set up the generator LSTM cell
 canvas = generator_rnn(
-    poses=query_pose,
     representations=scene_representation,
+    query_poses=query_pose,
     sequence_size=_SEQ_LENGTH)
 
 # feed random input through the graph

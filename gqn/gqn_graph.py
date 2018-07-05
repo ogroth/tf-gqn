@@ -17,95 +17,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-
-# constants
-_POSE_CHANNELS = 7
-
-# hyper-parameters
-_LSTM_OUTPUT_CHANNELS = 256
-_LSTM_CANVAS_CHANNELS = 256
-_LSTM_KERNEL_SIZE = 5
-
-_Z_CHANNELS = 64
-_REPRESENTATION_CHANNELS = 256
-
-_GENERATOR_INPUT_CHANNELS = _POSE_CHANNELS + _REPRESENTATION_CHANNELS + \
-                            _Z_CHANNELS
-
-_INFERENCE_INPUT_CHANNELS = _POSE_CHANNELS + _REPRESENTATION_CHANNELS
-
-
-def _broadcast_poses(poses, height, width):
-  with tf.control_dependencies([tf.assert_rank(poses, 2)]):  # (batch, 7)
-    poses = tf.reshape(poses, [-1, 1, 1, 7])
-    poses = tf.tile(poses, [1, height, width, 1])
-
-    return poses
-
-
-def tower_encoder(images, poses, scope="TowerEncoder"):
-  with tf.variable_scope(scope):
-    endpoints = {}
-    net = tf.layers.conv2d(images, filters=256, kernel_size=2, strides=2,
-                           padding="VALID", activation=tf.nn.relu)
-    skip1 = tf.layers.conv2d(net, filters=128, kernel_size=1, strides=1,
-                             padding="SAME", activation=None)
-    net = tf.layers.conv2d(net, filters=128, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
-    net = net + skip1
-    net = tf.layers.conv2d(net, filters=256, kernel_size=2, strides=2,
-                           padding="VALID", activation=tf.nn.relu)
-
-    # tile the poses to match the embedding shape
-    height, width = tf.shape(net)[1], tf.shape(net)[2]
-    poses = _broadcast_poses(poses, height, width)
-
-    # concatenate the poses with the embedding
-    net = tf.concat([net, poses], axis=3)
-
-    skip2 = tf.layers.conv2d(net, filters=128, kernel_size=1, strides=1,
-                             padding="SAME", activation=None)
-    net = tf.layers.conv2d(net, filters=128, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
-    net = net + skip2
-
-    net = tf.layers.conv2d(net, filters=256, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-
-    net = tf.layers.conv2d(net, filters=256, kernel_size=1, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-
-    return net, endpoints
-
-
-def pool_encoder(images, poses, scope="PoolEncoder"):
-  net, endpoints = tower_encoder(images, poses, scope)
-  with tf.variable_scope(scope):
-      net = tf.reduce_mean(net, axis=[1, 2], keepdims=True)
-
-  return net, endpoints
-
-
-def _ita(h, kernel_size=5, scope=None):
-  with tf.variable_scope(scope):
-    # TODO(stefan,ogroth): what's the activation function??
-    ita = tf.layers.conv2d(h, filters=2 * _Z_CHANNELS, kernel_size=kernel_size,
-                           padding='SAME')
-    mu, sigma = tf.split(ita, num_or_size_splits=2, axis=-1)
-
-    return mu, sigma
-
-
-def _sample_z(h, kernel_size=5, scope=None):
-  mu, sigma = _ita(h, kernel_size, scope)
-
-  with tf.variable_scope(scope):
-    z_shape = tf.shape(h).as_list()[:-1] + [_Z_CHANNELS]
-    z = mu + tf.multiply(sigma, tf.random_normal(shape=z_shape))
-
-    return z
+from .gqn_params import PARAMS
+from .gqn_utils import eta, sample_z
 
 
 class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
@@ -206,7 +119,7 @@ def generator_rnn(poses, representations, sequence_size=12,
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
 
-    poses = _broadcast_poses(poses, height, width)
+    poses = broadcast_poses(poses, height, width)
     inputs = tf.concat([poses, representations], axis=-1)
     state = cell.zero(batch, tf.float32)
 
@@ -214,7 +127,7 @@ def generator_rnn(poses, representations, sequence_size=12,
       if time > 0:
         varscope.reuse_variables()
 
-      z = _sample_z(state[1].h, scope="ita_pi")
+      z = sample_z(state[1].h, scope="ita_pi")
       (output, state) = cell(tf.concat([inputs, z], axis=-1), state)
 
       outputs.append(output)
@@ -244,7 +157,7 @@ def inference_rnn(poses, representations, sequence_size=12,
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
 
-    poses = _broadcast_poses(poses, height, width)
+    poses = broadcast_poses(poses, height, width)
     inputs = tf.concat([poses, representations], axis=-1)
 
     inf_state = inference_cell.zero_state(batch, tf.float32)
@@ -257,7 +170,7 @@ def inference_rnn(poses, representations, sequence_size=12,
       # TODO(stefan,ogroth): we need x^q, u^l
       inf_input = inputs
 
-      z = _sample_z(inf_state.h, scope="ita_q")
+      z = sample_z(inf_state.h, scope="ita_q")
       gen_input = tf.concat([inputs, z], axis=-1)
 
       # TODO(stefan,ogroth): how do you actually use the inference hidden state?

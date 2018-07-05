@@ -1,5 +1,15 @@
-import tensorflow as tf
+"""
+Contains the RNN cells of GQN.
+"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from collections import namedtuple
+from functools import reduce
+
+import tensorflow as tf
 
 from .gqn_params import PARAMS
 from .gqn_utils import broadcast_poses, sample_z
@@ -72,7 +82,7 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     new_hidden = self._conv(inputs)
     gates = tf.split(value=new_hidden,
                      num_or_size_splits=4,
-                     axis=self._conv_ndims+1)
+                     axis=-1)
 
     input_gate, new_input, forget_gate, output_gate = gates
     new_cell = tf.nn.sigmoid(forget_gate + self._forget_bias) * cell_state
@@ -90,16 +100,20 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     variables per input and (with the right scoping) share variables between
     different cells when inputs match.
     """
-    result = tf.zeros(shape=self._output_size.lstm)
+    conv_outputs = []
     for k in inputs:
-      result += tf.layers.conv2d(inputs[k],
-                                 filters=4 * self._output_channels,
-                                 kernel_size=self._kernel_size,
-                                 strides=1,
-                                 padding='SAME',
-                                 use_bias=self._use_bias,
-                                 activation=None,
-                                 name="{}_LSTMConv".format(k))
+      conv_outputs.append(
+        tf.layers.conv2d(
+            inputs[k],
+            filters=4 * self._output_channels,
+            kernel_size=self._kernel_size,
+            strides=1,
+            padding='SAME',
+            use_bias=self._use_bias,
+            activation=None,
+            name="{}_LSTMConv".format(k))
+      )
+    result = reduce(lambda conv1, conv2: tf.add(conv1, conv2), conv_outputs)
 
     return result
 
@@ -182,8 +196,8 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
     new_canvas = canvas + tf.layers.conv2d_transpose(
       sub_output, filters=self._canvas_channels, kernel_size=4, strides=4)
 
-    new_output = (new_canvas, sub_output)
-    new_state = (new_canvas, new_sub_state)
+    new_output = _GeneratorCellOutput(new_canvas, sub_output)
+    new_state = _GeneratorCellState(new_canvas, new_sub_state)
 
     return new_output, new_state
 
@@ -298,7 +312,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
       if gen_step > 0:
         varscope.reuse_variables()
 
-      z = sample_z(state[1].h, scope="eta_pi")
+      z = sample_z(state.lstm.h, scope="eta_pi")
 
       inputs = _GeneratorCellInput(representations, query_poses, z)
       (output, state) = cell(inputs, state)

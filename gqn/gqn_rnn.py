@@ -144,8 +144,10 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
+    # canvas_size = tf.TensorShape(
+    #   map(lambda x: 4 * x, input_shape[:-1]) + [canvas_channels])
     canvas_size = tf.TensorShape(
-      map(lambda x: 4 * x, input_shape[:-1]) + [canvas_channels])
+      [4 * x for x in input_shape[:-1]] + [canvas_channels])
     self._canvas_channels = canvas_channels
     self._output_size = _GeneratorCellOutput(canvas_size,
                                              self._gqn_cell.output_size)
@@ -184,15 +186,20 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
 def generator_rnn(poses, representations, sequence_size=12,
                   scope="GeneratorRNN"):
-  batch = tf.shape(representations)[0]
-  height, width = tf.shape(representations)[1], tf.shape(representations)[2]
+
+  dim_r = representations.get_shape().as_list()
+  batch = dim_r[0]
+  height, width = dim_r[1], dim_r[2]
+
+  # batch = tf.shape(representations)[0]
+  # height, width = tf.shape(representations)[1], tf.shape(representations)[2]
 
   cell = GeneratorLSTMCell(
-    [height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
-    PARAMS.LSTM_OUTPUT_CHANNELS,
-    PARAMS.LSTM_CANVAS_CHANNELS,
-    PARAMS.LSTM_KERNEL_SIZE,
-    name="GeneratorCell")
+      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="GeneratorCell")
 
   outputs = []
   with tf.variable_scope(scope) as varscope:
@@ -202,25 +209,29 @@ def generator_rnn(poses, representations, sequence_size=12,
 
     poses = broadcast_poses(poses, height, width)
     inputs = tf.concat([poses, representations], axis=-1)
-    state = cell.zero(batch, tf.float32)
+    state = cell.zero_state(batch, tf.float32)
 
-    for time in range(sequence_size):
-      if time > 0:
+    for gen_step in range(sequence_size):
+      if gen_step > 0:
         varscope.reuse_variables()
 
-      z = sample_z(state[1].h, scope="ita_pi")
+      z = sample_z(state[1].h, scope="eta_pi")
       (output, state) = cell(tf.concat([inputs, z], axis=-1), state)
 
       outputs.append(output)
 
-  return outputs[-1][0]
+  return outputs[-1].canvas
 
 
 def inference_rnn(poses, representations, sequence_size=12,
                   scope="InferenceRNN"):
 
-  batch = tf.shape(representations)[0]
-  height, width = tf.shape(representations)[1], tf.shape(representations)[2]
+  dim_r = representations.get_shape().as_list()
+  batch = dim_r[0]
+  height, width = dim_r[1], dim_r[2]
+
+  # batch = tf.shape(representations)[0]
+  # height, width = tf.shape(representations)[1], tf.shape(representations)[2]
 
   # TODO(stefan,ogroth): how are variables shared between inference and
   #                      generator?

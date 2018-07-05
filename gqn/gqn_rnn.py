@@ -353,7 +353,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
     query_poses = broadcast_poses(query_poses, height, width)
 
     inf_state = inference_cell.zero_state(batch, tf.float32)
-    gen_state = generator_cell.zero(batch, tf.float32)
+    gen_state = generator_cell.zero_state(batch, tf.float32)
 
     for time in range(sequence_size):
       if time > 0:

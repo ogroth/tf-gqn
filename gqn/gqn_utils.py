@@ -41,7 +41,7 @@ def sample_z(h, kernel_size=5, scope=None):
   mu, sigma = eta(h, kernel_size, scope)
 
   with tf.variable_scope(scope):
-    z_shape = tf.shape(h).as_list()[:-1] + [PARAMS.Z_CHANNELS]
+    z_shape = h.get_shape().as_list()[:-1] + [PARAMS.Z_CHANNELS]
     z = mu + tf.multiply(sigma, tf.random_normal(shape=z_shape))
 
     return z

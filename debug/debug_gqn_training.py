@@ -23,6 +23,7 @@ _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
 _DIM_C_IMG = PARAMS.IMG_CHANNELS
+_DIM_R = PARAMS.REPRESENTATION_CHANNELS
 
 # CLI arguments
 ARGPARSER = argparse.ArgumentParser(
@@ -65,7 +66,7 @@ if __name__ == '__main__':
 
   # input placeholders
   query_pose = tf.placeholder(
-      shape=(FLAGS.batch_size, PARAMS.POSE_CHANNELS), dtype=tf.float32)
+      shape=(FLAGS.batch_size, _DIM_POSE), dtype=tf.float32)
   target_frame = tf.placeholder(
       shape=(FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
       dtype=tf.float32)
@@ -84,7 +85,7 @@ if __name__ == '__main__':
   r_encoder_batch, ep_encoder = pool_encoder(context_frames_packed, context_poses_packed)
   r_encoder_batch = tf.reshape(
       r_encoder_batch,
-      shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, 256]) # TODO(ogroth): parameterize reshape!
+      shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, _DIM_R])
   r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data tuple
 
   # loss function

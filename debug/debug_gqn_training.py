@@ -12,16 +12,18 @@ import argparse
 
 import tensorflow as tf
 
-# assumes tf-gqn path to live in PYTHONPATH
-from gqn.gqn_graph import pool_encoder
+# assumes tf-gqn path to live in PYTHONPATH!
+from gqn.gqn_params import PARAMS
+from gqn.gqn_encoder import pool_encoder
 from data_provider.gqn_tfr_provider import DataReader
 
+
 # constants
-# TODO(ogroth): refactor model constants into gqn module
-_DIM_POSE = 7
-_DIM_H_IMG = 64
-_DIM_W_IMG = 64
-_DIM_C_IMG = 3
+_DIM_POSE = PARAMS.POSE_CHANNELS
+_DIM_H_IMG = PARAMS.IMG_HEIGHT
+_DIM_W_IMG = PARAMS.IMG_WIDTH
+_DIM_C_IMG = PARAMS.IMG_CHANNELS
+_DIM_R = PARAMS.REPRESENTATION_CHANNELS
 
 # CLI arguments
 ARGPARSER = argparse.ArgumentParser(
@@ -83,7 +85,7 @@ if __name__ == '__main__':
   r_encoder_batch, ep_encoder = pool_encoder(context_frames_packed, context_poses_packed)
   r_encoder_batch = tf.reshape(
       r_encoder_batch,
-      shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, 256]) # TODO(ogroth): parameterize reshape!
+      shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, _DIM_R])
   r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data tuple
 
   # loss function

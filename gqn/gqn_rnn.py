@@ -151,7 +151,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
     canvas_size = tf.TensorShape(
-      map(lambda x: 4 * x, input_shape[:-1]) + [canvas_channels])
+      [4 * x for x in input_shape[:-1]] + [canvas_channels])
     self._canvas_channels = canvas_channels
     self._output_size = _GeneratorCellOutput(canvas_size,
                                              self._gqn_cell.output_size)
@@ -180,7 +180,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 
     # upscale the output and add it to u (the side state)
     new_canvas = canvas + tf.layers.conv2d_transpose(
-      sub_output, filters=self._side_state_channels, kernel_size=4, strides=4)
+      sub_output, filters=self._canvas_channels, kernel_size=4, strides=4)
 
     new_output = (new_canvas, sub_output)
     new_state = (new_canvas, new_sub_state)
@@ -273,15 +273,17 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
 
 def generator_rnn(representations, query_poses, sequence_size=12,
                   scope="GeneratorRNN"):
-  batch = tf.shape(representations)[0]
-  height, width = tf.shape(representations)[1], tf.shape(representations)[2]
+
+  dim_r = representations.get_shape().as_list()
+  batch = tf.shape(dim_r)[0]
+  height, width = dim_r[1], dim_r[2]
 
   cell = GeneratorLSTMCell(
-    [height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
-    PARAMS.LSTM_OUTPUT_CHANNELS,
-    PARAMS.LSTM_CANVAS_CHANNELS,
-    PARAMS.LSTM_KERNEL_SIZE,
-    name="GeneratorCell")
+      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="GeneratorCell")
 
   outputs = []
   with tf.variable_scope(scope) as varscope:
@@ -290,10 +292,10 @@ def generator_rnn(representations, query_poses, sequence_size=12,
         varscope.set_caching_device(lambda op: op.device)
 
     query_poses = broadcast_poses(query_poses, height, width)
-    state = cell.zero(batch, tf.float32)
+    state = cell.zero_state(batch, tf.float32)
 
-    for time in range(sequence_size):
-      if time > 0:
+    for gen_step in range(sequence_size):
+      if gen_step > 0:
         varscope.reuse_variables()
 
       z = sample_z(state[1].h, scope="eta_pi")
@@ -303,14 +305,15 @@ def generator_rnn(representations, query_poses, sequence_size=12,
 
       outputs.append(output)
 
-  return outputs[-1][0]
+  return outputs[-1].canvas
 
 
 def inference_rnn(representations, query_poses, query_images, sequence_size=12,
                   scope="InferenceRNN"):
 
+  dim_r = representations.get_shape().as_list()
   batch = tf.shape(representations)[0]
-  height, width = tf.shape(representations)[1], tf.shape(representations)[2]
+  height, width = dim_r[1], dim_r[2]
 
   # TODO(stefan,ogroth): how are variables shared between inference and
   #                      generator?

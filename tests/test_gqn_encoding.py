@@ -1,12 +1,11 @@
 """
-Quick test script to check graph definition of GQN.
+Quick test script to check graph definition of GQN encoder.
 """
 
 import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_graph import gqn
 from gqn.gqn_encoder import pool_encoder
 
 # constants

@@ -12,16 +12,17 @@ import argparse
 
 import tensorflow as tf
 
-# assumes tf-gqn path to live in PYTHONPATH
-from gqn.gqn_graph import pool_encoder
+# assumes tf-gqn path to live in PYTHONPATH!
+from gqn.gqn_params import PARAMS
+from gqn.gqn_encoder import pool_encoder
 from data_provider.gqn_tfr_provider import DataReader
 
+
 # constants
-# TODO(ogroth): refactor model constants into gqn module
-_DIM_POSE = 7
-_DIM_H_IMG = 64
-_DIM_W_IMG = 64
-_DIM_C_IMG = 3
+_DIM_POSE = PARAMS.POSE_CHANNELS
+_DIM_H_IMG = PARAMS.IMG_HEIGHT
+_DIM_W_IMG = PARAMS.IMG_WIDTH
+_DIM_C_IMG = PARAMS.IMG_CHANNELS
 
 # CLI arguments
 ARGPARSER = argparse.ArgumentParser(
@@ -64,7 +65,7 @@ if __name__ == '__main__':
 
   # input placeholders
   query_pose = tf.placeholder(
-      shape=(FLAGS.batch_size, _DIM_POSE), dtype=tf.float32)
+      shape=(FLAGS.batch_size, PARAMS.POSE_CHANNELS), dtype=tf.float32)
   target_frame = tf.placeholder(
       shape=(FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
       dtype=tf.float32)

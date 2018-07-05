@@ -8,9 +8,13 @@ from __future__ import print_function
 
 import collections
 
+
 GQNParams = collections.namedtuple(
     typename='GQNParams',
     field_names=[
+        'IMG_HEIGHT',
+        'IMG_WIDTH',
+        'IMG_CHANNELS',
         'POSE_CHANNELS',
         'LSTM_OUTPUT_CHANNELS',
         'LSTM_CANVAS_CHANNELS',
@@ -23,6 +27,9 @@ GQNParams = collections.namedtuple(
 PARAMS = GQNParams()
 
 # constants
+PARAMS.IMG_HEIGHT = 64
+PARAMS.IMG_WIDTH = 64
+PARAMS.IMG_CHANNELS = 3
 PARAMS.POSE_CHANNELS = 7
 
 # hyper-parameters

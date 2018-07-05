@@ -8,39 +8,24 @@ from __future__ import print_function
 
 import collections
 
+_DEFAULTS = {
+    # constants
+    'IMG_HEIGHT' : 64,
+    'IMG_WIDTH' : 64,
+    'IMG_CHANNELS' : 3,
+    'POSE_CHANNELS' : 7,
+    # hyper-parameters
+    'LSTM_OUTPUT_CHANNELS' : 256,
+    'LSTM_CANVAS_CHANNELS' : 256,
+    'LSTM_KERNEL_SIZE' : 5,
+    'Z_CHANNELS' : 64,
+    'REPRESENTATION_CHANNELS' : 256,
+    'GENERATOR_INPUT_CHANNELS' : 327, # pose + representation + z
+    'INFERENCE_INPUT_CHANNELS' : 263, # pose + representation
+}
 
-GQNParams = collections.namedtuple(
+_GQNParams = collections.namedtuple(
     typename='GQNParams',
-    field_names=[
-        'IMG_HEIGHT',
-        'IMG_WIDTH',
-        'IMG_CHANNELS',
-        'POSE_CHANNELS',
-        'LSTM_OUTPUT_CHANNELS',
-        'LSTM_CANVAS_CHANNELS',
-        'LSTM_KERNEL_SIZE',
-        'Z_CHANNELS',
-        'REPRESENTATION_CHANNELS',
-        'GENERATOR_INPUT_CHANNELS',
-        'INFERENCE_INPUT_CHANNELS',
-    ])
-PARAMS = GQNParams()
-
-# constants
-PARAMS.IMG_HEIGHT = 64
-PARAMS.IMG_WIDTH = 64
-PARAMS.IMG_CHANNELS = 3
-PARAMS.POSE_CHANNELS = 7
-
-# hyper-parameters
-PARAMS.LSTM_OUTPUT_CHANNELS = 256
-PARAMS.LSTM_CANVAS_CHANNELS = 256
-PARAMS.LSTM_KERNEL_SIZE = 5
-
-PARAMS.Z_CHANNELS = 64
-PARAMS.REPRESENTATION_CHANNELS = 256
-
-PARAMS.GENERATOR_INPUT_CHANNELS = PARAMS.POSE_CHANNELS + PARAMS.REPRESENTATION_CHANNELS + \
-                                  PARAMS.Z_CHANNELS
-
-PARAMS.INFERENCE_INPUT_CHANNELS = PARAMS.POSE_CHANNELS + PARAMS.REPRESENTATION_CHANNELS
+    field_names=list(_DEFAULTS.keys())
+    )
+PARAMS = _GQNParams(**_DEFAULTS)

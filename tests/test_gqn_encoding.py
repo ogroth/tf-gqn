@@ -45,10 +45,10 @@ r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations p
 with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
   feed_dict = {
-    query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
-    target_frame : np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
-    context_poses : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
-    context_frames : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+      query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
+      target_frame : np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+      context_poses : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
+      context_frames : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
   }  
-  r = sess.run(r_encoder,feed_dict=feed_dict)
+  r = sess.run(r_encoder, feed_dict=feed_dict)
   print(r)

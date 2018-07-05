@@ -19,9 +19,9 @@ _SEQ_LENGTH = 1
 
 # input placeholders
 query_pose = tf.placeholder(
-    shape=(_BATCH_SIZE, _DIM_POSE), dtype=tf.float32)
+    shape=[_BATCH_SIZE, _DIM_POSE], dtype=tf.float32)
 scene_representation = tf.placeholder(
-    shape=(_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C), dtype=tf.float32)
+    shape=[_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C], dtype=tf.float32)
 
 # set up the generator LSTM cell
 canvas = generator_rnn(
@@ -36,6 +36,6 @@ with tf.Session() as sess:
       query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
       scene_representation : np.random.rand(_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C),
   }
-  c = sess.run(canvas,feed_dict=feed_dict)
+  c = sess.run(canvas, feed_dict=feed_dict)
   print(c)
   print(c.shape)

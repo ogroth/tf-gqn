@@ -185,6 +185,12 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     return output, new_state
 
   def _conv(self, inputs):
+    """
+    This is numerically equivalent to concatenating the inputs and then
+    convolving everything. However, it allows for splitting the convolution
+    variables per input and (with the right scoping) share variables between
+    different cells when inputs match.
+    """
     result = tf.zeros(shape=self._output_size.lstm)
     for input in inputs:
       result += tf.layers.conv2d(input,

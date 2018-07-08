@@ -328,24 +328,21 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
   batch = tf.shape(representations)[0]
   height, width = dim_r[1], dim_r[2]
 
-  # TODO(stefan,ogroth): how are variables shared between inference and
-  #                      generator?
-
+  # generator and inference cell need to have the same name because of variable sharing!
   generator_cell = GeneratorLSTMCell(
       input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
       output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
       canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
       kernel_size=PARAMS.LSTM_KERNEL_SIZE,
-      name="GeneratorCell")
-
+      name="ConvLSTM")
   inference_cell = InferenceLSTMCell(
       input_shape=[height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
       output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
       kernel_size=PARAMS.LSTM_KERNEL_SIZE,
-      name="InferenceCell")
+      name="ConvLSTM")
 
   outputs = []
-  with tf.variable_scope(scope) as varscope:
+  with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
     if not tf.executing_eagerly():
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
@@ -366,11 +363,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       z = sample_z(inf_state.h, scope="ita_q")
       gen_input = _GeneratorCellInput(representations, query_poses, z)
 
-      # TODO(stefan,ogroth): how do you actually use the inference hidden state?
-      inf_state[1].h += gen_state[1].h
-
       (inf_output, inf_state) = inference_cell(inf_input, inf_state)
-      varscope.reuse_variables()
       (gen_output, gen_state) = generator_cell(gen_input, gen_state)
 
       outputs.append((inf_output, gen_output))

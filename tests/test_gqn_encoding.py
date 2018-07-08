@@ -15,19 +15,19 @@ _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
 _DIM_C_IMG = PARAMS.IMG_CHANNELS
-_DIM_R = PARAMS.REPRESENTATION_CHANNELS
+_DIM_R = PARAMS.ENC_CHANNELS
 
 # input placeholders
 query_pose = tf.placeholder(
-    shape=(_BATCH_SIZE, _DIM_POSE), dtype=tf.float32)
+    shape=[_BATCH_SIZE, _DIM_POSE], dtype=tf.float32)
 target_frame = tf.placeholder(
-    shape=(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+    shape=[_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
     dtype=tf.float32)
 context_poses = tf.placeholder(
-    shape=(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
+    shape=[_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE],
     dtype=tf.float32)
 context_frames = tf.placeholder(
-    shape=(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+    shape=[_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
     dtype=tf.float32)
 
 # reshape context pairs into pseudo batch for representation network

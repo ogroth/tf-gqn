@@ -360,7 +360,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
           representations, query_poses, query_images, gen_state.canvas,
           gen_state.lstm.h)
 
-      z = sample_z(inf_state.h, scope="ita_q")
+      z = sample_z(inf_state.h, scope="eta_q")
       gen_input = _GeneratorCellInput(representations, query_poses, z)
 
       (inf_output, inf_state) = inference_cell(inf_input, inf_state)

@@ -355,7 +355,6 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
   batch = tf.shape(representations)[0]
   height, width = dim_r[1], dim_r[2]
 
-  # generator and inference cell need to have the same name because of variable sharing!
   generator_cell = GeneratorLSTMCell(
       input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
       output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
@@ -396,6 +395,9 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
                                                        scope="Sample_eta_pi")
       gen_input = _GeneratorCellInput(representations, query_poses, z_q)
+
+      # generator and inference cell need to have the same variable scope
+      # for variable sharing!
       with tf.name_scope("Inference"):
         (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM")
       with tf.name_scope("Generator"):

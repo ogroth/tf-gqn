@@ -313,7 +313,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
 
   outputs = []
   endpoints = {}
-  with tf.variable_scope(scope) as varscope:
+  with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
     if not tf.executing_eagerly():
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
@@ -323,8 +323,6 @@ def generator_rnn(representations, query_poses, sequence_size=12,
 
     # unroll generator LSTM
     for step in range(sequence_size):
-      if step > 0:
-        varscope.reuse_variables()
       z = sample_z(state.lstm.h, scope="Sample_eta_pi")
       inputs = _GeneratorCellInput(representations, query_poses, z)
       with tf.name_scope("Generator"):
@@ -381,8 +379,6 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
 
     # unroll the LSTM cells
     for step in range(sequence_size):
-      if step > 0:
-        varscope.reuse_variables()
 
       # TODO(stefan,ogroth): What is the correct order for sampling, inference
       # and generator update?

@@ -8,10 +8,13 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from .gqn_params import PARAMS
 from .gqn_utils import broadcast_poses
 
+
 def tower_encoder(images, poses, scope="TowerEncoder"):
+  """
+  Feed-forward convolutional architecture.
+  """
   with tf.variable_scope(scope):
     endpoints = {}
     net = tf.layers.conv2d(images, filters=256, kernel_size=2, strides=2,
@@ -49,8 +52,11 @@ def tower_encoder(images, poses, scope="TowerEncoder"):
 
 
 def pool_encoder(images, poses, scope="PoolEncoder"):
+  """
+  Feed-forward convolutional architecture with terminal global pooling.
+  """
   net, endpoints = tower_encoder(images, poses, scope)
   with tf.variable_scope(scope):
-      net = tf.reduce_mean(net, axis=[1, 2], keepdims=True)
+    net = tf.reduce_mean(net, axis=[1, 2], keepdims=True)
 
   return net, endpoints

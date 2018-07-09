@@ -126,8 +126,8 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
 
 _GeneratorCellInput = namedtuple('GeneratorCellInput',
                                  ['representation', 'query_pose', 'z'])
-_GeneratorCellOutput = namedtuple('GeneratorCellOutput', ['canvas', 'lstm'])
-_GeneratorCellState = namedtuple('GeneratorCellState', ['canvas', 'lstm'])
+_GeneratorCellOutput = namedtuple('GeneratorCellOutput', ['canvas', 'lstm']) # canvas, h
+_GeneratorCellState = namedtuple('GeneratorCellState', ['canvas', 'lstm']) # canvas, (c, h)
 
 
 class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
@@ -212,6 +212,8 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
 _InferenceCellInput = namedtuple('InferenceCellInput',
                                  ['representation', 'query_pose', 'query_image',
                                   'canvas', 'h_g'])
+_InferenceCellOutput = namedtuple('InferenceCellOutput', ['lstm']) # h
+_InferenceCellState = namedtuple('InferenceCellOutput', ['lstm']) # c, h
 
 
 class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
@@ -253,8 +255,8 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
 
     # TODO(stefan,ogroth): do we want to hard-code here the output size of the
     #                      deconvolution to 4?
-    self._output_size = self._gqn_cell.output_size
-    self._state_size = self._gqn_cell.state_size
+    self._output_size = _InferenceCellOutput(self._gqn_cell.output_size)
+    self._state_size = _InferenceCellState(self._gqn_cell.state_size)
 
   @property
   def output_size(self):
@@ -264,14 +266,14 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
   def state_size(self):
     return self._state_size
 
-  def call(self, inputs, state, scope=None):
+  def call(self, inputs: tf.Tensor, state: _InferenceCellState, scope=None) -> _InferenceCellOutput:
     """
     :param inputs: concatenated pose, representation, and noise z
-    :param state: canvas (u), cell (c), and hidden (h) states
+    :param state:
     :param scope:
     :return:
     """
-    cell_state, hidden_state = state
+    cell_state, hidden_state = state.lstm
 
     input_dict = inputs._asdict()
     query_image = input_dict.pop('query_image')
@@ -282,7 +284,7 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
     # downscale the query image and canvas to add it to the hidden state
     input_canvas_and_image = tf.layers.conv2d(
         tf.concat([query_image, canvas], axis=-1),
-        filters=self.output_size[-1], kernel_size=4, strides=4,
+        filters=self.output_size.lstm[-1], kernel_size=4, strides=4,
         padding='VALID', use_bias=False,
         name="DownsampleInferenceInputCanvasAndImage")
     hidden_state += input_canvas_and_image
@@ -291,7 +293,7 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
     output, new_state = self._gqn_cell(
       input_dict, state, scope=create_sub_scope(scope, "GQNCell"))
 
-    return output, new_state
+    return _InferenceCellOutput(output), _InferenceCellState(new_state)
 
 
 def generator_rnn(representations, query_poses, sequence_size=12,
@@ -367,11 +369,13 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       if time > 0:
         varscope.reuse_variables()
 
+      # TODO(stefan,ogroth): What is the correct order for sampling, inference
+      # and generator update?
       inf_input = _InferenceCellInput(
           representations, query_poses, query_images, gen_state.canvas,
           gen_state.lstm.h)
 
-      z_q = sample_z(inf_state.h, scope="Sample_eta_q")
+      z_q = sample_z(inf_state.lstm.h, scope="Sample_eta_q")
       z_pi = sample_z(gen_state.lstm.h, scope="Sample_eta_pi")  # need for ELBO
       gen_input = _GeneratorCellInput(representations, query_poses, z_q)
 

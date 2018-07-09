@@ -185,7 +185,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
   def state_size(self):
     return self._state_size
 
-  def call(self, inputs, state, scope=None):
+  def call(self, inputs: _GeneratorCellInput, state: _GeneratorCellState, scope=None) -> _GeneratorCellOutput:
     """
     :param inputs: concatenated pose, representation, and noise z
     :param state: canvas (u), cell (c), and hidden (h) states
@@ -266,7 +266,7 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
   def state_size(self):
     return self._state_size
 
-  def call(self, inputs: tf.Tensor, state: _InferenceCellState, scope=None) -> _InferenceCellOutput:
+  def call(self, inputs: _InferenceCellInput, state: _InferenceCellState, scope=None) -> _InferenceCellOutput:
     """
     :param inputs: concatenated pose, representation, and noise z
     :param state:

@@ -266,3 +266,149 @@ class DataReader(object):
     cameras = tf.concat(
         [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=2)
     return cameras
+
+
+def input_fn(dataset,
+             context_size,
+             root,
+             mode,
+             batch_size=1,
+             num_epochs=1,
+             # Optionally reshape frames
+             custom_frame_size=None,
+             # Queue params
+             num_threads=4,
+             buffer_size=256,
+             seed=None):
+  """
+  Creates a tf.data.Dataset based op that returns data.
+    Args:
+      dataset: string, one of ['jaco', 'mazes', 'rooms_ring_camera',
+          'rooms_free_camera_no_object_rotations',
+          'rooms_free_camera_with_object_rotations', 'shepard_metzler_5_parts',
+          'shepard_metzler_7_parts'].
+      context_size: integer, number of views to be used to assemble the context.
+      root: string, path to the root folder of the data.
+      mode: one of tf.estimator.ModeKeys.
+      batch_size: (optional) batch size, defaults to 1.
+      num_epochs: (optional) number of times to go through the dataset,
+          defaults to 1.
+      custom_frame_size: (optional) integer, required size of the returned
+          frames, defaults to None.
+      num_threads: (optional) integer, number of threads used to read and parse
+          the record files, defaults to 4.
+      buffer_size: (optional) integer, capacity of the underlying prefetch or
+          shuffle buffer, defualts to 256.
+      seed: (optional) integer, seed for the random number generators used in
+          the dataset.
+
+    Raises:
+      ValueError: if the required version does not exist; if the required mode
+         is not supported; if the requested context_size is bigger than the
+         maximum supported for the given dataset version.
+  """
+  if dataset not in _DATASETS:
+    raise ValueError('Unrecognized dataset {} requested. Available datasets '
+                     'are {}'.format(dataset, _DATASETS.keys()))
+
+  dataset_info = _DATASETS[dataset]
+
+  if context_size >= dataset_info.sequence_size:
+    raise ValueError(
+      'Maximum support context size for dataset {} is {}, but '
+      'was {}.'.format(
+        dataset, dataset_info.sequence_size-1, context_size))
+
+  # Number of views in the context + target view
+  example_size = context_size + 1
+
+  if mode == tf.estimator.ModeKeys.TRAIN:
+    str_mode = 'train'
+  else:
+    str_mode = 'test'
+
+  # These functions are copied from the provided record reader/parser, and are
+  # definded in here (as opposed to in the file scope) in order to capture the
+  # variables that would normally be available as instance fields
+  # TODO(stefan): this is a bit hard to read, refactor the code to move these
+  #               functions outside
+  def _parse_record(raw_data):
+    feature_map = {
+      'frames': tf.FixedLenFeature(
+        shape=dataset_info.sequence_size, dtype=tf.string),
+      'cameras': tf.FixedLenFeature(
+        shape=[dataset_info.sequence_size * _NUM_RAW_CAMERA_PARAMS],
+        dtype=tf.float32)
+    }
+    example = tf.parse_example(raw_data, feature_map)
+    indices = _get_randomized_indices()
+    frames = _preprocess_frames(example, indices)
+    cameras = _preprocess_cameras(example, indices)
+    return frames, cameras
+
+  def _get_randomized_indices():
+    """Generates randomized indices into a sequence of a specific length."""
+    indices = tf.range(0, dataset_info.sequence_size)
+    indices = tf.random_shuffle(indices)
+    indices = tf.slice(indices, begin=[0], size=[example_size])
+    return indices
+
+  def _preprocess_frames(example, indices):
+    """Instantiates the ops used to preprocess the frames data."""
+    frames = tf.concat(example['frames'], axis=0)
+    frames = tf.gather(frames, indices, axis=1)
+    frames = tf.map_fn(
+      _convert_frame_data, tf.reshape(frames, [-1]),
+      dtype=tf.float32, back_prop=False)
+    dataset_image_dimensions = tuple(
+      [dataset_info.frame_size] * 2 + [_NUM_CHANNELS])
+    frames = tf.reshape(
+      frames, (-1, example_size) + dataset_image_dimensions)
+    if (custom_frame_size and
+        custom_frame_size != dataset_info.frame_size):
+      frames = tf.reshape(frames, (-1,) + dataset_image_dimensions)
+      new_frame_dimensions = (custom_frame_size,) * 2 + (_NUM_CHANNELS,)
+      frames = tf.image.resize_bilinear(
+        frames, new_frame_dimensions[:2], align_corners=True)
+      frames = tf.reshape(
+        frames, (-1, example_size) + new_frame_dimensions)
+    return frames
+
+  def _preprocess_cameras(example, indices):
+    """Instantiates the ops used to preprocess the cameras data."""
+    raw_pose_params = example['cameras']
+    raw_pose_params = tf.reshape(
+      raw_pose_params,
+      [-1, dataset_info.sequence_size, _NUM_RAW_CAMERA_PARAMS])
+    raw_pose_params = tf.gather(raw_pose_params, indices, axis=1)
+    pos = raw_pose_params[:, :, 0:3]
+    yaw = raw_pose_params[:, :, 3:4]
+    pitch = raw_pose_params[:, :, 4:5]
+    cameras = tf.concat(
+      [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=2)
+    return cameras
+
+  # From now on we actually define the dataset
+  file_names = _get_dataset_files(dataset_info, str_mode, root)
+
+  dataset = tf.data.TFRecordDataset(file_names, num_parallel_reads=num_threads)
+  dataset = dataset.map(_parse_record, num_parallel_calls=num_threads)
+
+  if mode == tf.estimator.ModeKeys.TRAIN:
+    dataset = dataset.shuffle(buffer_size=buffer_size, seed=seed)
+  else:
+    dataset = dataset.prefetch(buffer_size=buffer_size)
+
+  dataset = dataset.batch(batch_size).repeat(num_epochs)
+  it = dataset.make_one_shot_iterator()
+
+  frames, cameras = it.get_next()
+  context_frames = frames[:, :-1]
+  context_cameras = cameras[:, :-1]
+  target = frames[:, -1]
+  query_camera = cameras[:, -1]
+  context = Context(cameras=context_cameras, frames=context_frames)
+  query = Query(context=context, query_camera=query_camera)
+  return TaskData(query=query, target=target)
+
+

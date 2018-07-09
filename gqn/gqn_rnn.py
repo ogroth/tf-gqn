@@ -312,6 +312,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
       name="GeneratorCell")
 
   outputs = []
+  endpoints = {}
   with tf.variable_scope(scope) as varscope:
     if not tf.executing_eagerly():
       if varscope.caching_device is None:
@@ -320,27 +321,35 @@ def generator_rnn(representations, query_poses, sequence_size=12,
     query_poses = broadcast_poses(query_poses, height, width)
     state = cell.zero_state(batch, tf.float32)
 
-    for gen_step in range(sequence_size):
-      if gen_step > 0:
+    # unroll generator LSTM
+    for step in range(sequence_size):
+      if step > 0:
         varscope.reuse_variables()
-
       z = sample_z(state.lstm.h, scope="Sample_eta_pi")
-
       inputs = _GeneratorCellInput(representations, query_poses, z)
       with tf.name_scope("Generator"):
         (output, state) = cell(inputs, state, "LSTM")
 
+      # register enpoints
+      ep_canvas = "canvas_%d" % (step, )
+      endpoints[ep_canvas] = output.canvas
+
+      # aggregate outputs
       outputs.append(output)
 
-  return outputs[-1].canvas, {}
+    # compute final mu tensor parameterizing sampling of target frame
+    target_canvas = outputs[-1].canvas
+    mu_target, _, _ = compute_eta_and_sample_z(target_canvas, scope="Sample_eta_g")
+    endpoints['mu_target'] = mu_target
 
-
-_GaussianParametrisation = namedtuple("GaussianParametrisation",
-                                      ['mu', 'sigma'])
+  return mu_target, endpoints
 
 
 def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
                   scope="GQN_RNN"):
+  """
+  TODO(ogroth): write docstring!
+  """
 
   dim_r = representations.get_shape().as_list()
   batch = tf.shape(representations)[0]
@@ -361,8 +370,6 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
 
   outputs = []
   endpoints = {}
-  endpoints['eta_q'] = []
-  endpoints['eta_pi'] = []
   with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
     if not tf.executing_eagerly():
       if varscope.caching_device is None:
@@ -373,32 +380,43 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     inf_state = inference_cell.zero_state(batch, tf.float32)
     gen_state = generator_cell.zero_state(batch, tf.float32)
 
-    for time in range(sequence_size):
-      if time > 0:
+    # unroll the LSTM cells
+    for step in range(sequence_size):
+      if step > 0:
         varscope.reuse_variables()
 
       # TODO(stefan,ogroth): What is the correct order for sampling, inference
       # and generator update?
+      # 1) sample; 2) infer; 3) generate
       inf_input = _InferenceCellInput(
           representations, query_poses, target_frames, gen_state.canvas,
           gen_state.lstm.h)
-
       mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
                                                     scope="Sample_eta_q")
       mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
                                                        scope="Sample_eta_pi")
-
       gen_input = _GeneratorCellInput(representations, query_poses, z_q)
-
       with tf.name_scope("Inference"):
         (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM")
-
       with tf.name_scope("Generator"):
         (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM")
 
+      # register enpoints
+      ep_mu_q = "mu_q_%d" % (step, )
+      ep_mu_pi = "mu_pi_%d" % (step, )
+      ep_sigma_q = "sigma_q_%d" % (step, )
+      ep_sigma_pi = "sigma_pi_%d" % (step, )
+      endpoints[ep_mu_q] = mu_q
+      endpoints[ep_mu_pi] = mu_pi
+      endpoints[ep_sigma_q] = sigma_q
+      endpoints[ep_sigma_pi] = sigma_pi
+
+      # aggregate outputs
       outputs.append((inf_output, gen_output))
 
-      endpoints['eta_q'].append(_GaussianParametrisation(mu_q, sigma_q))
-      endpoints['eta_pi'].append(_GaussianParametrisation(mu_pi, sigma_pi))
+    # compute final mu tensor parameterizing sampling of target frame
+    target_canvas = outputs[-1][0].canvas
+    mu_target, _, _ = compute_eta_and_sample_z(target_canvas, scope="Sample_eta_g")
+    endpoints['mu_target'] = mu_target
 
-  return outputs, endpoints
+  return mu_target, endpoints

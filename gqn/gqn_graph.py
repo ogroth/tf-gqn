@@ -20,6 +20,7 @@ import tensorflow as tf
 from .gqn_params import _GQNParams
 from .gqn_encoder import pool_encoder
 from .gqn_rnn import inference_rnn, generator_rnn
+from .gqn_utils import broadcast_encoding
 
 
 
@@ -75,21 +76,24 @@ def gqn(
     # unpack scene encoding and reduce to single vector
     enc_r_packed = tf.reshape(
         enc_r_packed,
-        shape=[_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_ENC, _DIM_H_ENC, _DIM_C_ENC])
+        shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
     enc_r = tf.reduce_sum(enc_r_packed, axis=1) # add scene representations per data tuple
     endpoints["enc_r"] = enc_r
+
+    # broadcast scene representation to 1/4 of targeted frame size
+    enc_r_broadcast = broadcast_encoding(vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
 
     # define generator graph (with inference component if in training mode)
     if is_training:
       mu_target, endpoints_rnn = inference_rnn(
-          representations=enc_r,
+          representations=enc_r_broadcast,
           query_poses=query_pose,
           target_frames=target_frame,
           sequence_size=_SEQ_LENGTH,
       )
     else:
       mu_target, endpoints_rnn = generator_rnn(
-          representations=enc_r,
+          representations=enc_r_broadcast,
           query_poses=query_pose,
           sequence_size=_SEQ_LENGTH
       )

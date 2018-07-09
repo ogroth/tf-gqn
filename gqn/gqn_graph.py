@@ -81,27 +81,19 @@ def gqn(
 
     # define generator graph (with inference component if in training mode)
     if is_training:
-      # outputs = [(inf_output, gen_output)]
-      # inf_output: lstm -> h^e_l
-      # gen_output: canvas -> u_l, lstm -> h^g_l
-      outputs = inference_rnn( # TODO(ogroth): return endpoints to eta functions!
+      mu_target, endpoints_rnn = inference_rnn(
           representations=enc_r,
           query_poses=query_pose,
           target_frames=target_frame,
           sequence_size=_SEQ_LENGTH,
       )
-      # expose endpoints for loss computation: (mu, sigma) tensors
-      # for all h^e_l: eta^q_psi, eta^pi_theta -> (mu, sigma)
-      for i, t in enumerate(outputs):
-        inf_mu = "inf_mu_%d" % (i, )
-        gen_mu = "gen_mu_%d" % (i, )
-        inf_sigma = "inf_sigma_%d" % (i, )
-        gen_sigma = "gen_sigma_%d" % (i, )
-        canvas = "canvas_%d" % (i, )
-      # return mus to sample target image
-      # u_L: eta^g_theta -> mu
     else:
-      pass
+      mu_target, endpoints_rnn = generator_rnn(
+          representations=enc_r,
+          query_poses=query_pose,
+          sequence_size=_SEQ_LENGTH
+      )
 
-    net = enc_r
+    endpoints.update(endpoints_rnn)
+    net = mu_target # final mu tensor parameterizing target frame sampling
     return net, endpoints

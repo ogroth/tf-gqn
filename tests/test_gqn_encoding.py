@@ -15,14 +15,9 @@ _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
 _DIM_C_IMG = PARAMS.IMG_CHANNELS
-_DIM_R = PARAMS.ENC_CHANNELS
+_DIM_C_ENC = PARAMS.ENC_CHANNELS
 
 # input placeholders
-query_pose = tf.placeholder(
-    shape=[_BATCH_SIZE, _DIM_POSE], dtype=tf.float32)
-target_frame = tf.placeholder(
-    shape=[_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
-    dtype=tf.float32)
 context_poses = tf.placeholder(
     shape=[_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE],
     dtype=tf.float32)
@@ -38,15 +33,13 @@ context_frames_packed = tf.reshape(context_frames, shape=[-1, _DIM_H_IMG, _DIM_W
 r_encoder_batch, ep_encoding = pool_encoder(context_frames_packed, context_poses_packed)
 r_encoder_batch = tf.reshape(
     r_encoder_batch,
-    shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_R])
+    shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
 r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data tuple
 
 # feed random input through the graph
 with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
   feed_dict = {
-      query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
-      target_frame : np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
       context_poses : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
       context_frames : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
   }  

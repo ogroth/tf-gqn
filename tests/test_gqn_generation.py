@@ -10,7 +10,6 @@ from gqn.gqn_rnn import generator_rnn
 
 # constants
 _BATCH_SIZE = 1
-_CONTEXT_SIZE = PARAMS.CONTEXT_SIZE
 _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_R_H = PARAMS.ENC_HEIGHT
 _DIM_R_W = PARAMS.ENC_WIDTH

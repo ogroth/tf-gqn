@@ -323,7 +323,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
   return outputs[-1].canvas
 
 
-def inference_rnn(representations, query_poses, query_images, sequence_size=12,
+def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
                   scope="InferenceRNN"):
 
   dim_r = representations.get_shape().as_list()
@@ -361,7 +361,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       # TODO(stefan,ogroth): What is the correct order for sampling, inference
       # and generator update?
       inf_input = _InferenceCellInput(
-          representations, query_poses, query_images, gen_state.canvas,
+          representations, query_poses, target_frames, gen_state.canvas,
           gen_state.lstm.h)
       z = sample_z(inf_state.h, scope="eta_q")
       gen_input = _GeneratorCellInput(representations, query_poses, z)

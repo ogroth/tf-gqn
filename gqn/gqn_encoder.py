@@ -11,13 +11,13 @@ import tensorflow as tf
 from .gqn_utils import broadcast_poses
 
 
-def tower_encoder(images, poses, scope="TowerEncoder"):
+def tower_encoder(frames: tf.Tensor, poses: tf.Tensor, scope="TowerEncoder"):
   """
   Feed-forward convolutional architecture.
   """
   with tf.variable_scope(scope):
     endpoints = {}
-    net = tf.layers.conv2d(images, filters=256, kernel_size=2, strides=2,
+    net = tf.layers.conv2d(frames, filters=256, kernel_size=2, strides=2,
                            padding="VALID", activation=tf.nn.relu)
     skip1 = tf.layers.conv2d(net, filters=128, kernel_size=1, strides=1,
                              padding="SAME", activation=None)
@@ -51,11 +51,11 @@ def tower_encoder(images, poses, scope="TowerEncoder"):
     return net, endpoints
 
 
-def pool_encoder(images, poses, scope="PoolEncoder"):
+def pool_encoder(frames: tf.Tensor, poses: tf.Tensor, scope="PoolEncoder"):
   """
   Feed-forward convolutional architecture with terminal global pooling.
   """
-  net, endpoints = tower_encoder(images, poses, scope)
+  net, endpoints = tower_encoder(frames, poses, scope)
   with tf.variable_scope(scope):
     net = tf.reduce_mean(net, axis=[1, 2], keepdims=True)
 

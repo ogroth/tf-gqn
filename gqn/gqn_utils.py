@@ -11,6 +11,7 @@ from .gqn_params import PARAMS
 
 
 def add_scope(fn, scope):
+  # TODO(stefan): add docstring
   def _wrapper(*args, **kwargs):
     if scope is not None:
       with tf.variable_scope(scope):
@@ -22,6 +23,7 @@ def add_scope(fn, scope):
 
 
 def optional_scope_default(default_scope=None):
+  # TODO(stefan): add docstring
     def _optional_scope(fn):
         def extract_and_add_scope(*args, **kwargs):
             scope = kwargs.pop("scope", default_scope)
@@ -36,6 +38,7 @@ optional_scope = optional_scope_default(None)
 
 
 def create_sub_scope(scope, name):
+  # TODO(stefan): add docstring
   if scope is None:
     varscope = tf.get_variable_scope()
   else:
@@ -73,7 +76,7 @@ def compute_eta_and_sample_z(h, kernel_size=5):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
-  Statistics of the normal distribution are obtained from h.
+  Statistics of the normal distribution are obtained from h via a convolutional function eta.
   The sampling is done via the 're-parameterization trick' (factoring out noise into epsilon).
   """
   mu, sigma = eta(h, kernel_size, scope="eta")
@@ -87,5 +90,11 @@ def compute_eta_and_sample_z(h, kernel_size=5):
 
 @optional_scope
 def sample_z(h, kernel_size=5):
+  """
+  Samples a variational encoding vector z from a normal distribution parameterized by a hidden
+  state h.
+  Statistics of the normal distribution are obtained from h via a convolutional function eta.
+  The sampling is done via the 're-parameterization trick' (factoring out noise into epsilon).
+  """
   _, _, z = compute_eta_and_sample_z(h, kernel_size)
   return z

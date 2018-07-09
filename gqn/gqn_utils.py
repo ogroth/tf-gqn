@@ -69,7 +69,7 @@ def eta(h, kernel_size=5):
 
 
 @optional_scope
-def sample_z(h, kernel_size=5):
+def compute_eta_and_sample_z(h, kernel_size=5):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
@@ -78,8 +78,14 @@ def sample_z(h, kernel_size=5):
   """
   mu, sigma = eta(h, kernel_size, scope="eta")
   with tf.variable_scope("Sampling"):
-    z_shape = tf.concat([tf.shape(h)[:-1], [PARAMS.Z_CHANNELS]], axis=0, 
+    z_shape = tf.concat([tf.shape(h)[:-1], [PARAMS.Z_CHANNELS]], axis=0,
                         name="CreateZShape")
     z = mu + tf.multiply(sigma, tf.random_normal(shape=z_shape))
 
+  return mu, sigma, z
+
+
+@optional_scope
+def sample_z(h, kernel_size=5):
+  _, _, z = compute_eta_and_sample_z(h, kernel_size)
   return z

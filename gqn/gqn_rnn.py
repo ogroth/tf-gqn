@@ -11,7 +11,8 @@ from collections import namedtuple
 import tensorflow as tf
 
 from .gqn_params import PARAMS
-from .gqn_utils import broadcast_poses, create_sub_scope, sample_z
+from .gqn_utils import broadcast_poses, create_sub_scope, \
+  compute_eta_and_sample_z, sample_z
 
 
 class GQNLSTMCell(tf.contrib.rnn.RNNCell):
@@ -331,7 +332,11 @@ def generator_rnn(representations, query_poses, sequence_size=12,
 
       outputs.append(output)
 
-  return outputs[-1].canvas
+  return outputs[-1].canvas, {}
+
+
+_GaussianParametrisation = namedtuple("GaussianParametrisation",
+                                      ['mu', 'sigma'])
 
 
 def inference_rnn(representations, query_poses, query_images, sequence_size=12,
@@ -355,6 +360,9 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       name="InferenceCell")
 
   outputs = []
+  endpoints = {}
+  endpoints['eta_q'] = []
+  endpoints['eta_pi'] = []
   with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
     if not tf.executing_eagerly():
       if varscope.caching_device is None:
@@ -375,8 +383,11 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
           representations, query_poses, query_images, gen_state.canvas,
           gen_state.lstm.h)
 
-      z_q = sample_z(inf_state.lstm.h, scope="Sample_eta_q")
-      z_pi = sample_z(gen_state.lstm.h, scope="Sample_eta_pi")  # need for ELBO
+      mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
+                                                    scope="Sample_eta_q")
+      mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
+                                                       scope="Sample_eta_pi")
+
       gen_input = _GeneratorCellInput(representations, query_poses, z_q)
 
       with tf.name_scope("Inference"):
@@ -387,4 +398,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
 
       outputs.append((inf_output, gen_output))
 
-  return outputs
+      endpoints['eta_q'].append(_GaussianParametrisation(mu_q, sigma_q))
+      endpoints['eta_pi'].append(_GaussianParametrisation(mu_pi, sigma_pi))
+
+  return outputs, endpoints

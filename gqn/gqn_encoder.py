@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from .gqn_utils import broadcast_poses
+from .gqn_utils import broadcast_pose
 
 
 def tower_encoder(frames: tf.Tensor, poses: tf.Tensor, scope="TowerEncoder"):
@@ -30,7 +30,7 @@ def tower_encoder(frames: tf.Tensor, poses: tf.Tensor, scope="TowerEncoder"):
 
     # tile the poses to match the embedding shape
     height, width = tf.shape(net)[1], tf.shape(net)[2]
-    poses = broadcast_poses(poses, height, width)
+    poses = broadcast_pose(poses, height, width)
 
     # concatenate the poses with the embedding
     net = tf.concat([net, poses], axis=3)

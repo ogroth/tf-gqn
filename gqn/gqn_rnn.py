@@ -11,7 +11,7 @@ from collections import namedtuple
 import tensorflow as tf
 
 from .gqn_params import PARAMS
-from .gqn_utils import broadcast_poses, create_sub_scope, \
+from .gqn_utils import broadcast_pose, create_sub_scope, \
   compute_eta_and_sample_z, sample_z
 
 
@@ -318,7 +318,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
 
-    query_poses = broadcast_poses(query_poses, height, width)
+    query_poses = broadcast_pose(query_poses, height, width)
     state = cell.zero_state(batch, tf.float32)
 
     # unroll generator LSTM
@@ -372,7 +372,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       if varscope.caching_device is None:
         varscope.set_caching_device(lambda op: op.device)
 
-    query_poses = broadcast_poses(query_poses, height, width)
+    query_poses = broadcast_pose(query_poses, height, width)
 
     inf_state = inference_cell.zero_state(batch, tf.float32)
     gen_state = generator_cell.zero_state(batch, tf.float32)

@@ -48,13 +48,21 @@ def create_sub_scope(scope, name):
     return subvarscope
 
 
-def broadcast_poses(poses, height, width):
+def broadcast_pose(vector, height, width):
   """
-  Broadcasts a pose vector to every pixel of an image.
+  Broadcasts a pose vector to every pixel of a target image.
   """
-  poses = tf.reshape(poses, [-1, 1, 1, PARAMS.POSE_CHANNELS])
-  poses = tf.tile(poses, [1, height, width, 1])
-  return poses
+  vector = tf.reshape(vector, [-1, 1, 1, PARAMS.POSE_CHANNELS])
+  vector = tf.tile(vector, [1, height, width, 1])
+  return vector
+
+def broadcast_encoding(vector, height, width):
+  """
+  Broadcasts a scene encoding to every pixel of a target image.
+  """
+  vector = tf.reshape(vector, [-1, 1, 1, PARAMS.ENC_CHANNELS])
+  vector = tf.tile(vector, [1, height, width, 1])
+  return vector
 
 
 @optional_scope

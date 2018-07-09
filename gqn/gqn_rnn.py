@@ -7,12 +7,11 @@ from __future__ import division
 from __future__ import print_function
 
 from collections import namedtuple
-from functools import reduce
 
 import tensorflow as tf
 
 from .gqn_params import PARAMS
-from .gqn_utils import broadcast_poses, sample_z
+from .gqn_utils import broadcast_poses, create_sub_scope, sample_z
 
 
 class GQNLSTMCell(tf.contrib.rnn.RNNCell):
@@ -79,16 +78,24 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     cell_state, hidden_state = state
 
     inputs[self._hidden_state_name] = hidden_state
-    new_hidden = self._conv(inputs)
-    gates = tf.split(value=new_hidden,
-                     num_or_size_splits=4,
-                     axis=-1)
+
+    with tf.name_scope("InputConv"):
+        new_hidden = self._conv(inputs)
+        gates = tf.split(value=new_hidden,
+                         num_or_size_splits=4,
+                         axis=-1)
 
     input_gate, new_input, forget_gate, output_gate = gates
-    new_cell = tf.nn.sigmoid(forget_gate + self._forget_bias) * cell_state
-    new_cell += tf.nn.sigmoid(input_gate) * tf.nn.tanh(new_input)
 
-    output = tf.nn.tanh(new_cell) * tf.nn.sigmoid(output_gate)
+    with tf.name_scope("Forget"):
+      new_cell = tf.nn.sigmoid(forget_gate + self._forget_bias) * cell_state
+
+    with tf.name_scope("Update"):
+      new_cell += tf.nn.sigmoid(input_gate) * tf.nn.tanh(new_input)
+
+    with tf.name_scope("Output"):
+      output = tf.nn.tanh(new_cell) * tf.nn.sigmoid(output_gate)
+
     new_state = tf.contrib.rnn.LSTMStateTuple(new_cell, output)
 
     return output, new_state
@@ -113,9 +120,8 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
               activation=None,
               name="{}_LSTMConv".format(k))
       )
-    result = reduce(lambda conv1, conv2: tf.add(conv1, conv2), conv_outputs)
 
-    return result
+    return tf.add_n(conv_outputs)
 
 
 _GeneratorCellInput = namedtuple('GeneratorCellInput',
@@ -189,11 +195,13 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
     canvas, (cell_state, hidden_state) = state
     sub_state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
 
-    sub_output, new_sub_state = self._gqn_cell(inputs._asdict(), sub_state)
+    sub_output, new_sub_state = self._gqn_cell(
+      inputs._asdict(), sub_state, scope=create_sub_scope(scope, "GQNCell"))
 
     # upscale the output and add it to u (the side state)
     new_canvas = canvas + tf.layers.conv2d_transpose(
-        sub_output, filters=self._canvas_channels, kernel_size=4, strides=4)
+        sub_output, filters=self._canvas_channels, kernel_size=4, strides=4,
+        name="UpsampleGeneratorOutput")
 
     new_output = _GeneratorCellOutput(new_canvas, sub_output)
     new_state = _GeneratorCellState(new_canvas, new_sub_state)
@@ -275,20 +283,22 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
     input_canvas_and_image = tf.layers.conv2d(
         tf.concat([query_image, canvas], axis=-1),
         filters=self.output_size[-1], kernel_size=4, strides=4,
-        padding='VALID', use_bias=False)
+        padding='VALID', use_bias=False,
+        name="DownsampleInferenceInputCanvasAndImage")
     hidden_state += input_canvas_and_image
 
     state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
-    output, new_state = self._gqn_cell(input_dict, state)
+    output, new_state = self._gqn_cell(
+      input_dict, state, scope=create_sub_scope(scope, "GQNCell"))
 
     return output, new_state
 
 
 def generator_rnn(representations, query_poses, sequence_size=12,
-                  scope="GeneratorRNN"):
+                  scope="GQN_RNN"):
 
   dim_r = representations.get_shape().as_list()
-  batch = tf.shape(dim_r)[0]
+  batch = tf.shape(representations)[0]
   height, width = dim_r[1], dim_r[2]
 
   cell = GeneratorLSTMCell(
@@ -311,10 +321,11 @@ def generator_rnn(representations, query_poses, sequence_size=12,
       if gen_step > 0:
         varscope.reuse_variables()
 
-      z = sample_z(state.lstm.h, scope="eta_pi")
+      z = sample_z(state.lstm.h, scope="Sample_eta_pi")
 
       inputs = _GeneratorCellInput(representations, query_poses, z)
-      (output, state) = cell(inputs, state)
+      with tf.name_scope("Generator"):
+        (output, state) = cell(inputs, state, "LSTM")
 
       outputs.append(output)
 
@@ -322,7 +333,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
 
 
 def inference_rnn(representations, query_poses, query_images, sequence_size=12,
-                  scope="InferenceRNN"):
+                  scope="GQN_RNN"):
 
   dim_r = representations.get_shape().as_list()
   batch = tf.shape(representations)[0]
@@ -334,12 +345,12 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
       canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
       kernel_size=PARAMS.LSTM_KERNEL_SIZE,
-      name="ConvLSTM")
+      name="GeneratorCell")
   inference_cell = InferenceLSTMCell(
       input_shape=[height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
       output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
       kernel_size=PARAMS.LSTM_KERNEL_SIZE,
-      name="ConvLSTM")
+      name="InferenceCell")
 
   outputs = []
   with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
@@ -360,11 +371,15 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
           representations, query_poses, query_images, gen_state.canvas,
           gen_state.lstm.h)
 
-      z = sample_z(inf_state.h, scope="ita_q")
-      gen_input = _GeneratorCellInput(representations, query_poses, z)
+      z_q = sample_z(inf_state.h, scope="Sample_eta_q")
+      z_pi = sample_z(gen_state.lstm.h, scope="Sample_eta_pi")  # need for ELBO
+      gen_input = _GeneratorCellInput(representations, query_poses, z_q)
 
-      (inf_output, inf_state) = inference_cell(inf_input, inf_state)
-      (gen_output, gen_state) = generator_cell(gen_input, gen_state)
+      with tf.name_scope("Inference"):
+        (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM")
+
+      with tf.name_scope("Generator"):
+        (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM")
 
       outputs.append((inf_output, gen_output))
 

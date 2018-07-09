@@ -33,7 +33,7 @@ scene_representation = tf.placeholder(
 outputs = inference_rnn(
     representations=scene_representation,
     query_poses=query_pose,
-    query_images=target_frame,
+    target_frames=target_frame,
     sequence_size=_SEQ_LENGTH)
 
 # feed random input through the graph

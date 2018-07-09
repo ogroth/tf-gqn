@@ -339,7 +339,7 @@ _GaussianParametrisation = namedtuple("GaussianParametrisation",
                                       ['mu', 'sigma'])
 
 
-def inference_rnn(representations, query_poses, query_images, sequence_size=12,
+def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
                   scope="GQN_RNN"):
 
   dim_r = representations.get_shape().as_list()
@@ -380,7 +380,7 @@ def inference_rnn(representations, query_poses, query_images, sequence_size=12,
       # TODO(stefan,ogroth): What is the correct order for sampling, inference
       # and generator update?
       inf_input = _InferenceCellInput(
-          representations, query_poses, query_images, gen_state.canvas,
+          representations, query_poses, target_frames, gen_state.canvas,
           gen_state.lstm.h)
 
       mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,

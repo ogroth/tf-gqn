@@ -10,7 +10,6 @@ from gqn.gqn_rnn import inference_rnn
 
 # constants
 _BATCH_SIZE = 1
-# _CONTEXT_SIZE = 5
 _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
@@ -18,7 +17,7 @@ _DIM_C_IMG = PARAMS.IMG_CHANNELS
 _DIM_R_H = PARAMS.ENC_HEIGHT
 _DIM_R_W = PARAMS.ENC_WIDTH
 _DIM_R_C = PARAMS.ENC_CHANNELS
-_SEQ_LENGTH = 1
+_SEQ_LENGTH = PARAMS.SEQ_LENGTH
 
 # input placeholders
 query_pose = tf.placeholder(

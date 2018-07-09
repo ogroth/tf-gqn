@@ -35,7 +35,7 @@ context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
 context_frames_packed = tf.reshape(context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
 
 # set up encoder for scene representation
-r_encoder_batch, ep_encoder = pool_encoder(context_frames_packed, context_poses_packed)
+r_encoder_batch, ep_encoding = pool_encoder(context_frames_packed, context_poses_packed)
 r_encoder_batch = tf.reshape(
     r_encoder_batch,
     shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_R])
@@ -52,3 +52,6 @@ with tf.Session() as sess:
   }  
   r = sess.run(r_encoder, feed_dict=feed_dict)
   print(r)
+  print(r.shape)
+  for ep, t in ep_encoding.items():
+    print(ep, t)

@@ -417,7 +417,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       outputs.append((inf_output, gen_output))
 
     # compute final mu tensor parameterizing sampling of target frame
-    target_canvas = outputs[-1][0].canvas
+    target_canvas = outputs[-1][1].canvas
     mu_target, _, _ = compute_eta_and_sample_z(target_canvas, scope="Sample_eta_g")
     endpoints['mu_target'] = mu_target
 

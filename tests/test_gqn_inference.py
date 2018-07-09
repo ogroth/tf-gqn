@@ -30,7 +30,7 @@ scene_representation = tf.placeholder(
     shape=[_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C], dtype=tf.float32)
 
 # set up the generator LSTM cell
-outputs = inference_rnn(
+mu_target, ep_inference = inference_rnn(
     representations=scene_representation,
     query_poses=query_pose,
     target_frames=target_frame,
@@ -44,5 +44,8 @@ with tf.Session() as sess:
       target_frame : np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
       scene_representation : np.random.rand(_BATCH_SIZE, _DIM_R_H, _DIM_R_W, _DIM_R_C),
   }
-  o = sess.run(outputs, feed_dict=feed_dict)
-  print(o)
+  mu = sess.run(mu_target, feed_dict=feed_dict)
+  print(mu)
+  print(mu.shape)
+  for ep, t in ep_inference.items():
+    print(ep, t)

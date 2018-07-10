@@ -17,70 +17,87 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-
-def tower_encoder(images, poses, scope="TowerEncoder"):
-  with tf.variable_scope(scope):
-    endpoints = {}
-    net = tf.layers.conv2d(images, filters=256, kernel_size=2, strides=2,
-                           padding="VALID", activation=tf.nn.relu)
-    skip1 = tf.layers.conv2d(net, filters=128, kernel_size=1, strides=1,
-                             padding="SAME", activation=None)
-    net = tf.layers.conv2d(net, filters=128, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
-    net = net + skip1
-    net = tf.layers.conv2d(net, filters=256, kernel_size=2, strides=2,
-                           padding="VALID", activation=tf.nn.relu)
-
-    # tile the poses to match the embedding shape
-    with tf.control_dependencies([tf.assert_rank(poses, 2)]):  # (batch, 7)
-        height, width = tf.shape(net)[1], tf.shape(net)[2]
-
-        poses = tf.reshape(poses, [-1, 1, 1, 7])
-        poses = tf.tile(poses, [1, height, width, 1])
-
-    # concatenate the poses with the embedding
-    net = tf.concat([net, poses], axis=3)
-
-    skip2 = tf.layers.conv2d(net, filters=128, kernel_size=1, strides=1,
-                             padding="SAME", activation=None)
-    net = tf.layers.conv2d(net, filters=128, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
-    net = net + skip2
-
-    net = tf.layers.conv2d(net, filters=256, kernel_size=3, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-
-    net = tf.layers.conv2d(net, filters=256, kernel_size=1, strides=1,
-                           padding="SAME", activation=tf.nn.relu)
-
-    return net, endpoints
+from .gqn_params import _GQNParams
+from .gqn_encoder import pool_encoder
+from .gqn_rnn import inference_rnn, generator_rnn
+from .gqn_utils import broadcast_encoding
 
 
-def pool_encoder(images, poses, scope="PoolEncoder"):
-  net, endpoints = tower_encoder(images, poses, scope)
-  with tf.variable_scope(scope):
-      net = tf.reduce_mean(net, axis=[1, 2], keepdims=True)
 
-  return net, endpoints
-
-
-def gqn(images, poses, scope="GQN"):
+def gqn(
+    query_pose: tf.Tensor, target_frame: tf.Tensor,
+    context_poses: tf.Tensor, context_frames: tf.Tensor,
+    model_params: _GQNParams, is_training: bool = True,
+    scope: str = "GQN"):
   """
   Defines the computational graph of the GQN model.
+
+  Arguments:
+    query_pose: Pose vector of the query camera.
+    target_frame: Ground truth frame of the query camera.
+    context_poses: Camera poses of the context views.
+    context_frames: Frames of the context views.
+    model_params: Named tuple containing the parameters of the GQN model as \
+      defined in gqn_params.py
+    is_training: Flag whether graph shall be created in training mode (including \
+      the inference module necessary for training the generator). If set to 'False',
+      only the generator LSTM will be created.
+    scope: Scope name of the graph.
 
   Returns:
     net: The last tensor of the network.
     endpoints: A dictionary providing quick access to the most important model
       nodes in the computational graph.
   """
-  endpoints = {}
+  # shorthand notations for model parameters
+  _BATCH_SIZE = model_params.BATCH_SIZE
+  _CONTEXT_SIZE = model_params.CONTEXT_SIZE
+  _DIM_POSE = model_params.POSE_CHANNELS
+  _DIM_H_IMG = model_params.IMG_HEIGHT
+  _DIM_W_IMG = model_params.IMG_WIDTH
+  _DIM_C_IMG = model_params.IMG_CHANNELS
+  _DIM_H_ENC = model_params.ENC_HEIGHT
+  _DIM_W_ENC = model_params.ENC_WIDTH
+  _DIM_C_ENC = model_params.ENC_CHANNELS
+  _SEQ_LENGTH = model_params.SEQ_LENGTH
 
-  representation, endpoints_r = tower_encoder(images, poses)
+  with tf.variable_scope(scope):
+    endpoints = {}
 
-  endpoints.update(endpoints_r)
-  endpoints["representation"] = representation
+    # pack scene context into pseudo-batch for encoder
+    context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
+    context_frames_packed = tf.reshape(
+        context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
 
-  net = representation
-  return net, endpoints
+    # define scene encoding graph psi
+    enc_r_packed, endpoints_psi = pool_encoder(context_frames_packed, context_poses_packed)
+    endpoints.update(endpoints_psi)
+
+    # unpack scene encoding and reduce to single vector
+    enc_r_packed = tf.reshape(
+        enc_r_packed,
+        shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
+    enc_r = tf.reduce_sum(enc_r_packed, axis=1) # add scene representations per data tuple
+    endpoints["enc_r"] = enc_r
+
+    # broadcast scene representation to 1/4 of targeted frame size
+    enc_r_broadcast = broadcast_encoding(vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+
+    # define generator graph (with inference component if in training mode)
+    if is_training:
+      mu_target, endpoints_rnn = inference_rnn(
+          representations=enc_r_broadcast,
+          query_poses=query_pose,
+          target_frames=target_frame,
+          sequence_size=_SEQ_LENGTH,
+      )
+    else:
+      mu_target, endpoints_rnn = generator_rnn(
+          representations=enc_r_broadcast,
+          query_poses=query_pose,
+          sequence_size=_SEQ_LENGTH
+      )
+
+    endpoints.update(endpoints_rnn)
+    net = mu_target # final mu tensor parameterizing target frame sampling
+    return net, endpoints

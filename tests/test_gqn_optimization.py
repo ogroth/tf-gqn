@@ -17,7 +17,7 @@ _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
 _DIM_C_IMG = PARAMS.IMG_CHANNELS
 _SEQ_LENGTH = PARAMS.SEQ_LENGTH
-_MAX_TRAIN_STEPS = 10
+_MAX_TRAIN_STEPS = 50
 
 # input placeholders
 query_pose = tf.placeholder(
@@ -65,21 +65,31 @@ optimizer = tf.train.AdamOptimizer()
 grad_vars = optimizer.compute_gradients(loss=elbo)
 updates = optimizer.apply_gradients(grads_and_vars=grad_vars)
 
-# feed random input through the graph
+# print computational endpoints
+print("GQN enpoints:")
+for ep, t in ep_gqn.items():
+  print(ep, t)
+
+# overfit the graph to a random input data point
+rnd_query_pose = np.random.rand(_BATCH_SIZE, _DIM_POSE)
+rnd_target_frame = np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG)
+rnd_context_poses = np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE)
+rnd_context_frames = np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG)
+
 with tf.Session() as sess:
   sess.run(tf.global_variables_initializer())
   for step in range(_MAX_TRAIN_STEPS):
-    print("Training step: %d" % (step+1, ))
     _elbo, _grad_vars, _updates = sess.run(
         [elbo, grad_vars, updates],
         feed_dict={
-            query_pose : np.random.rand(_BATCH_SIZE, _DIM_POSE),
-            target_frame : np.random.rand(_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
-            context_poses : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
-            context_frames : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+            query_pose : rnd_query_pose,
+            target_frame : rnd_target_frame,
+            context_poses : rnd_context_poses,
+            context_frames : rnd_context_frames,
         })
+    if step == 0:  # print gradient setup after first feed
+      print("Gradient shapes:")
+      for _grad, _var in _grad_vars:
+        print(_grad.shape, _var.shape)
+    print("Training step: %d" % (step+1, ))
     print(_elbo)
-    for _grad, _var in _grad_vars:
-      print(_grad.shape, _var.shape)
-#   for ep, t in ep_gqn.items():
-#     print(ep, t)

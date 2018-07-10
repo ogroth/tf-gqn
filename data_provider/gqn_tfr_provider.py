@@ -392,14 +392,14 @@ def input_fn(dataset,
   file_names = _get_dataset_files(dataset_info, str_mode, root)
 
   dataset = tf.data.TFRecordDataset(file_names, num_parallel_reads=num_threads)
-  dataset = dataset.map(_parse_record, num_parallel_calls=num_threads)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
     dataset = dataset.shuffle(buffer_size=buffer_size, seed=seed)
-  else:
-    dataset = dataset.prefetch(buffer_size=buffer_size)
 
-  dataset = dataset.batch(batch_size).repeat(num_epochs)
+  dataset = dataset.batch(batch_size)
+  dataset = dataset.map(_parse_record, num_parallel_calls=num_threads)
+  dataset = dataset.repeat(num_epochs).prefetch(buffer_size)
+
   it = dataset.make_one_shot_iterator()
 
   frames, cameras = it.get_next()
@@ -410,5 +410,6 @@ def input_fn(dataset,
   context = Context(cameras=context_cameras, frames=context_frames)
   query = Query(context=context, query_camera=query_camera)
   return TaskData(query=query, target=target)
+
 
 

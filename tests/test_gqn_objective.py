@@ -47,6 +47,7 @@ sigma_target = tf.constant(  # additional parameter tuned during training
     value=1.0, dtype=tf.float32,
     shape=[_BATCH_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
 mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
+# collecting endpoints for ELBO computation
 for i in range(_SEQ_LENGTH):
   mu_q.append(ep_gqn["mu_q_%d" % i])
   sigma_q.append(ep_gqn["sigma_q_%d" % i])

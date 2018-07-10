@@ -35,14 +35,8 @@ def gqn_elbo(
       the target distribution regularized by the cumulative KL divergence between posterior \
       and prior distributions at every image generation step.
   """
-  # project mu and sigma tensors from target canvas down to 3-channels
-  # TODO(ogroth): Is this correct?
-  mu_target_proj = tf.layers.conv2d(
-      mu_target, filters=3, kernel_size=1, padding='SAME', name='mu_target_proj')
-  sigma_target_proj = tf.layers.conv2d(
-      sigma_target, filters=3, kernel_size=1, padding='SAME', name='sigma_target_proj')
   # negative log-likelihood of target frame given target distribution
-  target_normal = tf.distributions.Normal(loc=mu_target_proj, scale=sigma_target_proj)
+  target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
   target_llh = tf.identity(
       input=-tf.reduce_sum(
           tf.reduce_mean(target_normal.log_prob(target_frame), axis=0)),
@@ -53,11 +47,17 @@ def gqn_elbo(
     posterior_normal_l = tf.distributions.Normal(loc=mu_q_l, scale=sigma_q_l)
     prior_normal_l = tf.distributions.Normal(loc=mu_pi_l, scale=sigma_pi_l)
     kl_div_l = tf.distributions.kl_divergence(posterior_normal_l, prior_normal_l)
+    # kl_div_l = tf.Print(
+    #     input_=kl_div_l,
+    #     data=[tf.reduce_sum(tf.cast(tf.is_nan(kl_div_l), tf.float32))]
+    # )  # debug
     kl_div_list.append(kl_div_l)
   kl_regularizer = tf.identity(
       input=tf.reduce_sum(
           tf.reduce_mean(tf.add_n(kl_div_list), axis=0)),
       name='kl_regularizer')
   # final ELBO term
+  # target_llh = tf.Print(input_=target_llh, data=[target_llh])  # debug
+  # kl_regularizer = tf.Print(input_=kl_regularizer, data=[kl_regularizer])  # debug
   elbo = target_llh + kl_regularizer
   return elbo

@@ -66,30 +66,31 @@ def broadcast_encoding(vector, height, width):
 
 
 @optional_scope
-def eta(h, kernel_size=5):
+def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
   Computes sufficient statistics of a normal distribution (mu, sigma) from a hidden state
   representation via convolution.
   """
   # TODO(stefan,ogroth): activation not specified in the paper, guess: linear
-  eta = tf.layers.conv2d(h, filters=2*PARAMS.Z_CHANNELS, kernel_size=kernel_size,
-                         padding='SAME')
+  eta = tf.layers.conv2d( # 2 * channels because mu and sigma need to be computed per channel
+      h, filters=2*channels, kernel_size=kernel_size, padding='SAME')
   mu, sigma = tf.split(eta, num_or_size_splits=2, axis=-1)
+  sigma = tf.nn.elu(sigma) + tf.constant(1.0, dtype=tf.float32)  # ensuring sigma > 0
 
   return mu, sigma
 
 
 @optional_scope
-def compute_eta_and_sample_z(h, kernel_size=5):
+def compute_eta_and_sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
   Statistics of the normal distribution are obtained from h via a convolutional function eta.
   The sampling is done via the 're-parameterization trick' (factoring out noise into epsilon).
   """
-  mu, sigma = eta(h, kernel_size, scope="eta")
+  mu, sigma = eta(h, kernel_size, channels, scope="eta")
   with tf.variable_scope("Sampling"):
-    z_shape = tf.concat([tf.shape(h)[:-1], [PARAMS.Z_CHANNELS]], axis=0,
+    z_shape = tf.concat([tf.shape(h)[:-1], [channels]], axis=0,
                         name="CreateZShape")
     z = mu + tf.multiply(sigma, tf.random_normal(shape=z_shape))
 
@@ -97,7 +98,7 @@ def compute_eta_and_sample_z(h, kernel_size=5):
 
 
 @optional_scope
-def sample_z(h, kernel_size=5):
+def sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.

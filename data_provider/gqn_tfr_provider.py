@@ -269,6 +269,14 @@ class DataReader(object):
 
 
 class GQNTFRecordDataset(tf.data.Dataset):
+  """Minimal tf.data.Dataset based TFRecord dataset.
+
+  You can use this class to load the datasets used to train Generative Query
+  Networks (GQNs) in the 'Neural Scene Representation and Rendering' paper.
+  See README.md for a description of the datasets and an example of how to use
+  the class.
+  """
+
   def __init__(self, dataset, context_size, root, mode='train',
                custom_frame_size=None, num_threads=4, buffer_size=256,
                parse_batch_size=32):

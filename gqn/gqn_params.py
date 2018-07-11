@@ -25,10 +25,13 @@ _DEFAULTS = {
     'LSTM_OUTPUT_CHANNELS' : 256,
     'LSTM_CANVAS_CHANNELS' : 256,
     'LSTM_KERNEL_SIZE' : 5,
-    'Z_CHANNELS' : 64, # latent space size per image generation step
-    'GENERATOR_INPUT_CHANNELS' : 327, # pose + representation + z
-    'INFERENCE_INPUT_CHANNELS' : 263, # pose + representation
-    'SEQ_LENGTH' : 12, # number of steps in image generation sequence
+    'Z_CHANNELS' : 64,  # latent space size per image generation step
+    'GENERATOR_INPUT_CHANNELS' : 327,  # pose + representation + z
+    'INFERENCE_INPUT_CHANNELS' : 263,  # pose + representation
+    'SEQ_LENGTH' : 12,  # number of steps in image generation sequence
+    'GENERATOR_SIGMA_ALPHA' : 2.0,  # start value for global generation variance
+    'GENERATOR_SIGMA_BETA' : 0.5,  # final value for global generation variance
+    'GENERATOR_SIGMA_TAU' : 100000,  # annealing interval between sigma_alpha and sigma_beta
 }
 
 _GQNParams = collections.namedtuple(

@@ -14,8 +14,8 @@ _DEFAULTS = {
     'IMG_WIDTH' : 64,
     'IMG_CHANNELS' : 3,
     'POSE_CHANNELS' : 7,
-    # batch parameters
-    'BATCH_SIZE' : 1,
+    # input parameters
+    'BATCH_SIZE' : 1,  # TODO(ogroth): remove!
     'CONTEXT_SIZE' : 5,
     # hyper-parameters: scene representation
     'ENC_HEIGHT' : 16,

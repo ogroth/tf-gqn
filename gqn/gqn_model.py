@@ -18,22 +18,71 @@ from __future__ import print_function
 import tensorflow as tf
 
 from .gqn_graph import gqn
+from .gqn_params import _GQNParams
 
-# HYPERPARAMETER CONSTANTS
-# STUB
 
-def gqn_model_fn(features, labels, mode, params) -> tf.estimator.EstimatorSpec:
+def _linear_annealing_scheme(gqn_params: _GQNParams):
+  """
+  Defines the computational graph for the global sigma annealing scheme used in
+  image sampling.
+  """
+  anneal_alpha = tf.constant(gqn_params.GENERATOR_SIGMA_ALPHA, dtype=tf.float32)
+  anneal_beta = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
+  anneal_tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
+  anneal_step = tf.minimum(tf.train.get_global_step(), gqn_params.GENERATOR_SIGMA_TAU)
+  anneal_diff =  anneal_alpha - anneal_beta
+  anneal_coeff = anneal_step / anneal_tau
+  sigma_target = anneal_alpha - anneal_coeff * anneal_diff
+  return sigma_target
+
+
+def gqn_model_fn(features, labels, mode, params):
   """
   Defines an tf.estimator.EstimatorSpec for the GQN model.
 
   Args:
-    features:
-    labels:
+    features: Query = collections.namedtuple('Query', ['context', 'query_camera'])
+    labels: tf.Tensor of the target image
     mode:
     params:
+      gqn_params: _GQNParams type containing the model parameters
+      debug: bool; if true, model will produce additional debug output
+        tensorboard summaries for image generation process 
   
   Returns:
     spec: tf.estimator.EstimatorSpec
   """
-  #TODO: implement
+  # feature and label mapping according to gqn_input_fn
+  query_pose = features.query.query_camera
+  target_frame = labels
+  context_poses = features.query.context.cameras
+  context_frames = features.query.context.frames
+
+  # graph setup
+  net, ep_gqn = gqn(
+      query_pose=query_pose,
+      target_frame=target_frame,
+      context_poses=context_poses,
+      context_frames=context_frames,
+      model_params=params['gqn_params'],
+      is_training=(mode == tf.estimator.ModeKeys.TRAIN)
+  )
+
+  # outputs: sampled images
+  mu_target = net
+  sigma_target = _linear_annealing_scheme(params['gqn_params'])
+  target_sample = tf.constant(42)  # stub
+  # image generation steps in debug mode
+
+  # predictions
+  predictions = {
+    'target_sample' : target_sample
+  }
+
+  # ELBO setup
+  # eval_metric_ops
+  # train & eval summary hooks
+  # optimizer
+  # train_op
+
   raise NotImplementedError()

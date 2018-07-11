@@ -50,7 +50,6 @@ def gqn(
       nodes in the computational graph.
   """
   # shorthand notations for model parameters
-  _BATCH_SIZE = model_params.BATCH_SIZE
   _CONTEXT_SIZE = model_params.CONTEXT_SIZE
   _DIM_POSE = model_params.POSE_CHANNELS
   _DIM_H_IMG = model_params.IMG_HEIGHT
@@ -76,7 +75,7 @@ def gqn(
     # unpack scene encoding and reduce to single vector
     enc_r_packed = tf.reshape(
         enc_r_packed,
-        shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
+        shape=[-1, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
     enc_r = tf.reduce_sum(enc_r_packed, axis=1) # add scene representations per data tuple
     endpoints["enc_r"] = enc_r
 

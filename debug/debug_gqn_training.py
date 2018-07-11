@@ -14,16 +14,19 @@ import tensorflow as tf
 
 # assumes tf-gqn path to live in PYTHONPATH!
 from gqn.gqn_params import PARAMS
-from gqn.gqn_encoder import pool_encoder
+from gqn.gqn_graph import gqn
+from gqn.gqn_objective import gqn_elbo
 from data_provider.gqn_tfr_provider import DataReader
 
 
 # constants
+# TODO(ogroth): to be replaced with parameter set loaded from config
 _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
 _DIM_C_IMG = PARAMS.IMG_CHANNELS
-_DIM_R = PARAMS.REPRESENTATION_CHANNELS
+_SEQ_LENGTH = PARAMS.SEQ_LENGTH
+
 
 # CLI arguments
 ARGPARSER = argparse.ArgumentParser(
@@ -47,7 +50,7 @@ ARGPARSER.add_argument(
     help='The number of data points per batch. One data point is a tuple of \
     ((query_camera_pose, [(context_frame, context_camera_pose)]), target_frame).')
 ARGPARSER.add_argument(
-    '--steps_train', type=int, default=1,
+    '--steps_train', type=int, default=100,
     help='The number of parameter updates to perform.')
 
 
@@ -66,37 +69,57 @@ if __name__ == '__main__':
 
   # input placeholders
   query_pose = tf.placeholder(
-      shape=(FLAGS.batch_size, _DIM_POSE), dtype=tf.float32)
+      shape=[FLAGS.batch_size, _DIM_POSE], dtype=tf.float32)
   target_frame = tf.placeholder(
-      shape=(FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+      shape=[FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
       dtype=tf.float32)
   context_poses = tf.placeholder(
-      shape=(FLAGS.batch_size, FLAGS.context_size, _DIM_POSE),
+      shape=[FLAGS.batch_size, FLAGS.context_size, _DIM_POSE],
       dtype=tf.float32)
   context_frames = tf.placeholder(
-      shape=(FLAGS.batch_size, FLAGS.context_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
+      shape=[FLAGS.batch_size, FLAGS.context_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
       dtype=tf.float32)
 
-  # reshape context pairs into pseudo batch for representation network
-  context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
-  context_frames_packed = tf.reshape(context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
+  # graph definition
+  net, ep_gqn = gqn(
+      query_pose=query_pose,
+      target_frame=target_frame,
+      context_poses=context_poses,
+      context_frames=context_frames,
+      model_params=PARAMS,
+      is_training=True
+  )
 
-  # set up encoder for scene representation
-  r_encoder_batch, ep_encoder = pool_encoder(context_frames_packed, context_poses_packed)
-  r_encoder_batch = tf.reshape(
-      r_encoder_batch,
-      shape=[FLAGS.batch_size, FLAGS.context_size, 1, 1, _DIM_R])
-  r_encoder = tf.reduce_sum(r_encoder_batch, axis=1) # add scene representations per data tuple
-
-  # loss function
-  # STUB
+  # loss definition
+  mu_target = net
+  sigma_target = tf.constant(  # additional parameter tuned during training
+      value=1.0, dtype=tf.float32,
+      shape=[FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
+  mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
+  # collecting endpoints for ELBO computation
+  for i in range(_SEQ_LENGTH):
+    mu_q.append(ep_gqn["mu_q_%d" % i])
+    sigma_q.append(ep_gqn["sigma_q_%d" % i])
+    mu_pi.append(ep_gqn["mu_pi_%d" % i])
+    sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
+  elbo = gqn_elbo(
+      mu_target, sigma_target,
+      mu_q, sigma_q,
+      mu_pi, sigma_pi,
+      target_frame)
 
   # optimizer
-  # STUB
+  optimizer = tf.train.AdamOptimizer()
+  train_op = optimizer.minimize(loss=elbo)
+
+  # print computational endpoints
+  print("GQN enpoints:")
+  for ep, t in ep_gqn.items():
+    print(ep, t)
 
   # training loop
   with tf.train.SingularMonitoredSession() as sess:
-    for s in range(FLAGS.steps_train):
+    for step in range(FLAGS.steps_train):
       d = sess.run(data) # runs the dequeue ops to fetch the data
       # decompose data tuple into feed_dict
       feed_dict = {
@@ -105,5 +128,7 @@ if __name__ == '__main__':
         context_poses : d.query.context.cameras,
         context_frames : d.query.context.frames
       }
-      r = sess.run(r_encoder, feed_dict=feed_dict)
-      print(r)
+      # run one forward pass, compute elbo and update weights
+      _elbo, _train_op = sess.run([elbo, train_op], feed_dict=feed_dict)
+      print("Training step: %d" % (step + 1, ))
+      print(_elbo)

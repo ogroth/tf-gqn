@@ -67,18 +67,11 @@ if __name__ == '__main__':
       root=FLAGS.data_dir)
   data = data_reader.read(batch_size=FLAGS.batch_size)
 
-  # input placeholders
-  query_pose = tf.placeholder(
-      shape=[FLAGS.batch_size, _DIM_POSE], dtype=tf.float32)
-  target_frame = tf.placeholder(
-      shape=[FLAGS.batch_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
-      dtype=tf.float32)
-  context_poses = tf.placeholder(
-      shape=[FLAGS.batch_size, FLAGS.context_size, _DIM_POSE],
-      dtype=tf.float32)
-  context_frames = tf.placeholder(
-      shape=[FLAGS.batch_size, FLAGS.context_size, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG],
-      dtype=tf.float32)
+  # map data tuple to model inputs
+  query_pose = data.query.query_camera
+  target_frame = data.target
+  context_poses = data.query.context.cameras
+  context_frames = data.query.context.frames
 
   # graph definition
   net, ep_gqn = gqn(
@@ -114,21 +107,13 @@ if __name__ == '__main__':
 
   # print computational endpoints
   print("GQN enpoints:")
-  for ep, t in ep_gqn.items():
+  for ep, t in sorted(ep_gqn.items(), key=lambda x: x[0]):
     print(ep, t)
 
   # training loop
   with tf.train.SingularMonitoredSession() as sess:
     for step in range(FLAGS.steps_train):
-      d = sess.run(data) # runs the dequeue ops to fetch the data
-      # decompose data tuple into feed_dict
-      feed_dict = {
-        query_pose : d.query.query_camera,
-        target_frame : d.target,
-        context_poses : d.query.context.cameras,
-        context_frames : d.query.context.frames
-      }
       # run one forward pass, compute elbo and update weights
-      _elbo, _train_op = sess.run([elbo, train_op], feed_dict=feed_dict)
+      _elbo, _train_op = sess.run([elbo, train_op])
       print("Training step: %d" % (step + 1, ))
-      print(_elbo)
+      print("Negative ELBO: %f" % (_elbo, ))

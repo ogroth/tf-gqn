@@ -492,4 +492,5 @@ def input_fn(dataset,
   query_camera = cameras[:, -1]
   context = Context(cameras=context_cameras, frames=context_frames)
   query = Query(context=context, query_camera=query_camera)
-  return TaskData(query=query, target=target)
+  # return TaskData(query=query, target=target)
+  return query, target  # default return pattern of features, labels

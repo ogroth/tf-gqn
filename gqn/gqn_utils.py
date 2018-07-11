@@ -65,17 +65,26 @@ def broadcast_encoding(vector, height, width):
   return vector
 
 
+def eta_g(canvas,
+          kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+          channels=PARAMS.IMG_CHANNELS,
+          scope="eta_g"):
+  return tf.layers.conv2d(
+    canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
+    name=scope)
+
+
 @optional_scope
 def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
-  Computes sufficient statistics of a normal distribution (mu, sigma) from a hidden state
-  representation via convolution.
+  Computes sufficient statistics of a normal distribution (mu, sigma) from a
+  hidden state representation via convolution.
   """
   # TODO(stefan,ogroth): activation not specified in the paper, guess: linear
   eta = tf.layers.conv2d( # 2 * channels because mu and sigma need to be computed per channel
       h, filters=2*channels, kernel_size=kernel_size, padding='SAME')
   mu, sigma = tf.split(eta, num_or_size_splits=2, axis=-1)
-  sigma = tf.nn.elu(sigma) + tf.constant(1.0, dtype=tf.float32)  # ensuring sigma > 0
+  sigma = tf.nn.elu(sigma) + 1.0  # ensuring sigma > 0
 
   return mu, sigma
 

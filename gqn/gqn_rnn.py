@@ -12,7 +12,7 @@ import tensorflow as tf
 
 from .gqn_params import PARAMS
 from .gqn_utils import broadcast_pose, create_sub_scope, \
-  compute_eta_and_sample_z, sample_z
+  eta_g, compute_eta_and_sample_z, sample_z
 
 
 class GQNLSTMCell(tf.contrib.rnn.RNNCell):
@@ -404,18 +404,21 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       ep_mu_pi = "mu_pi_%d" % (step, )
       ep_sigma_q = "sigma_q_%d" % (step, )
       ep_sigma_pi = "sigma_pi_%d" % (step, )
+      ep_canvas = "canvas_%d" % (step, )
       endpoints[ep_mu_q] = mu_q
       endpoints[ep_mu_pi] = mu_pi
       endpoints[ep_sigma_q] = sigma_q
       endpoints[ep_sigma_pi] = sigma_pi
+      endpoints[ep_canvas] = gen_output.canvas
 
       # aggregate outputs
       outputs.append((inf_output, gen_output))
 
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1][1].canvas
-    mu_target, _, _ = compute_eta_and_sample_z(
-        target_canvas, channels=PARAMS.IMG_CHANNELS, scope="Sample_eta_g")
-    endpoints['mu_target'] = mu_target
+
+  mu_target = eta_g(
+      target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
+  endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints

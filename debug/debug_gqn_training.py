@@ -21,6 +21,7 @@ from data_provider.gqn_tfr_provider import DataReader
 
 # constants
 # TODO(ogroth): to be replaced with parameter set loaded from config
+_CONTEXT_SIZE = PARAMS.CONTEXT_SIZE
 _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_H_IMG = PARAMS.IMG_HEIGHT
 _DIM_W_IMG = PARAMS.IMG_WIDTH
@@ -42,15 +43,11 @@ ARGPARSER.add_argument(
     rooms_free_camera_with_object_rotations | rooms_ring_camera | \
     shepard_metzler_5_parts | shepard_metzler_7_parts')
 ARGPARSER.add_argument(
-    '--context_size', type=int, default=5,
-    help='The number of (frame, camera_pose) pairs provided as a context of \
-    a query pose.')
-ARGPARSER.add_argument(
-    '--batch_size', type=int, default=1, # 12
+    '--batch_size', type=int, default=12,
     help='The number of data points per batch. One data point is a tuple of \
     ((query_camera_pose, [(context_frame, context_camera_pose)]), target_frame).')
 ARGPARSER.add_argument(
-    '--steps_train', type=int, default=100,
+    '--steps_train', type=int, default=10000,
     help='The number of parameter updates to perform.')
 
 
@@ -63,7 +60,7 @@ if __name__ == '__main__':
   # data reader
   data_reader = DataReader(
       dataset=FLAGS.dataset,
-      context_size=FLAGS.context_size,
+      context_size=_CONTEXT_SIZE,
       root=FLAGS.data_dir)
   data = data_reader.read(batch_size=FLAGS.batch_size)
 

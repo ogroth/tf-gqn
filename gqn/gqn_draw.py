@@ -1,5 +1,22 @@
 """
-Contains the RNN cells of GQN.
+Contains the RNN definition of the DRAW architecture used for image generation.
+
+The DRAW architecture was originally introduced in:
+@InProceedings{pmlr-v37-gregor15,
+  title = 	 {DRAW: A Recurrent Neural Network For Image Generation},
+  author = 	 {Karol Gregor and Ivo Danihelka and Alex Graves and Danilo Rezende and Daan Wierstra},
+  booktitle = 	 {Proceedings of the 32nd International Conference on Machine Learning},
+  pages = 	 {1462--1471},
+  year = 	 {2015},
+  editor = 	 {Francis Bach and David Blei},
+  volume = 	 {37},
+  series = 	 {Proceedings of Machine Learning Research},
+  address = 	 {Lille, France},
+  month = 	 {07--09 Jul},
+  publisher = 	 {PMLR},
+  pdf = 	 {http://proceedings.mlr.press/v37/gregor15.pdf},
+  url = 	 {http://proceedings.mlr.press/v37/gregor15.html},
+}
 """
 
 from __future__ import absolute_import

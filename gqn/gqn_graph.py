@@ -148,8 +148,8 @@ def gqn_vae(
     query_pose: Pose vector of the query camera.
     context_poses: Camera poses of the context views.
     context_frames: Frames of the context views.
-    model_params: Named tuple containing the parameters of the GQN model as
-        defined in gqn_params.py
+    model_params: Named tuple containing the parameters of the GQN model as \
+      defined in gqn_params.py
     scope: Scope name of the graph.
 
   Returns:

@@ -52,6 +52,9 @@ def gqn_model_fn(features, labels, mode, params):
   Returns:
     spec: tf.estimator.EstimatorSpec
   """
+  # shorthand notations for parameters
+  _SEQ_LENGTH = params['gqn_params'].SEQ_LENGTH
+
   # feature and label mapping according to gqn_input_fn
   query_pose = features.query.query_camera
   target_frame = labels
@@ -68,19 +71,30 @@ def gqn_model_fn(features, labels, mode, params):
       is_training=(mode == tf.estimator.ModeKeys.TRAIN)
   )
 
+  # collect intermediate endpoints
+  mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
+  for i in range(_SEQ_LENGTH):
+    mu_q.append(ep_gqn["mu_q_%d" % i])
+    sigma_q.append(ep_gqn["sigma_q_%d" % i])
+    mu_pi.append(ep_gqn["mu_pi_%d" % i])
+    sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
+
   # outputs: sampled images
   mu_target = net
   sigma_target = _linear_annealing_scheme(params['gqn_params'])
-  target_sample = tf.constant(42)  # stub
+  target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
+  target_sample = target_normal.sample()
   # image generation steps in debug mode
+  # TODO(ogroth): add sampling from intermediate endpoints
 
   # predictions
   predictions = {
-    'target_sample' : target_sample
+      'target_sample' : target_sample
   }
 
-  # ELBO setup
   # eval_metric_ops
+
+  # ELBO setup
   # train & eval summary hooks
   # optimizer
   # train_op

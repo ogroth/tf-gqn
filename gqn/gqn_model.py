@@ -32,7 +32,7 @@ def _linear_annealing_scheme(gqn_params: _GQNParams) -> tf.Tensor:
   anneal_tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
   anneal_step = tf.minimum(tf.train.get_global_step(), gqn_params.GENERATOR_SIGMA_TAU)
   anneal_diff =  anneal_alpha - anneal_beta
-  anneal_coeff = anneal_step / anneal_tau
+  anneal_coeff = tf.cast(anneal_step, dtype=tf.float32) / anneal_tau
   sigma_target = anneal_alpha - anneal_coeff * anneal_diff
   return sigma_target
 
@@ -57,10 +57,10 @@ def gqn_model_fn(features, labels, mode, params):
   _SEQ_LENGTH = params['gqn_params'].SEQ_LENGTH
 
   # feature and label mapping according to gqn_input_fn
-  query_pose = features.query.query_camera
+  query_pose = features.query_camera
   target_frame = labels
-  context_poses = features.query.context.cameras
-  context_frames = features.query.context.frames
+  context_poses = features.context.cameras
+  context_frames = features.context.frames
 
   # graph setup
   net, ep_gqn = gqn(

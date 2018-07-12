@@ -10,6 +10,8 @@ import tensorflow as tf
 from .gqn_params import PARAMS
 
 
+# scoping utilities
+
 def add_scope(fn, scope):
   # TODO(stefan): add docstring
   def _wrapper(*args, **kwargs):
@@ -48,6 +50,8 @@ def create_sub_scope(scope, name):
     return subvarscope
 
 
+# shaping utilities
+
 def broadcast_pose(vector, height, width):
   """
   Broadcasts a pose vector to every pixel of a target image.
@@ -55,6 +59,7 @@ def broadcast_pose(vector, height, width):
   vector = tf.reshape(vector, [-1, 1, 1, PARAMS.POSE_CHANNELS])
   vector = tf.tile(vector, [1, height, width, 1])
   return vector
+
 
 def broadcast_encoding(vector, height, width):
   """
@@ -64,6 +69,8 @@ def broadcast_encoding(vector, height, width):
   vector = tf.tile(vector, [1, height, width, 1])
   return vector
 
+
+# sampling utilities
 
 def eta_g(canvas,
           kernel_size=PARAMS.LSTM_KERNEL_SIZE,
@@ -116,3 +123,27 @@ def sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS)
   """
   _, _, z = compute_eta_and_sample_z(h, kernel_size)
   return z
+
+
+# visualization utilities
+
+_BAR_WIDTH = 2
+
+
+def debug_canvas_image(canvases, eta_g_scope='GQN'):
+  with tf.variable_scope(eta_g_scope, reuse=True, auxiliary_name_scope=False), \
+      tf.name_scope('debug'):
+    mean_images = []
+
+    with tf.name_scope('MakeWhiteBar'):
+      cs = tf.shape(canvases[0])
+      batch, height, channels = cs[0], cs[1], 3
+      white_vertical_bar = tf.ones(shape=(batch, height, _BAR_WIDTH, channels), 
+                                    dtype=tf.float32,
+                                    name='white_bar')
+
+    for canvas in canvases:   
+      mean_images.append(eta_g(canvas))
+      mean_images.append(white_vertical_bar)
+
+    return tf.concat(mean_images[:-1], axis=-2, name='MakeGrid')

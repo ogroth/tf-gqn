@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from .gqn_params import _GQNParams
 from .gqn_encoder import pool_encoder
-from .gqn_rnn import inference_rnn, generator_rnn
+from .gqn_draw import inference_rnn, generator_rnn
 from .gqn_utils import broadcast_encoding
 
 

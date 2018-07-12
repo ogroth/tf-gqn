@@ -429,18 +429,19 @@ class GQNTFRecordDataset(tf.data.Dataset):
     return self._dataset.output_types
 
 
-def input_fn(dataset,
-             context_size,
-             root,
-             mode,
-             batch_size=1,
-             num_epochs=1,
-             # Optionally reshape frames
-             custom_frame_size=None,
-             # Queue params
-             num_threads=4,
-             buffer_size=256,
-             seed=None):
+def gqn_input_fn(
+    dataset,
+    context_size,
+    root,
+    mode,
+    batch_size=1,
+    num_epochs=1,
+    # Optionally reshape frames
+    custom_frame_size=None,
+    # Queue params
+    num_threads=4,
+    buffer_size=256,
+    seed=None):
   """
   Creates a tf.data.Dataset based op that returns data.
     Args:
@@ -492,4 +493,5 @@ def input_fn(dataset,
   query_camera = cameras[:, -1]
   context = Context(cameras=context_cameras, frames=context_frames)
   query = Query(context=context, query_camera=query_camera)
-  return TaskData(query=query, target=target)
+  # return TaskData(query=query, target=target)
+  return query, target  # default return pattern of features, labels

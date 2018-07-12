@@ -10,6 +10,8 @@ import tensorflow as tf
 from .gqn_params import PARAMS
 
 
+# scoping utilities
+
 def add_scope(fn, scope):
   # TODO(stefan): add docstring
   def _wrapper(*args, **kwargs):
@@ -48,6 +50,8 @@ def create_sub_scope(scope, name):
     return subvarscope
 
 
+# shaping utilities
+
 def broadcast_pose(vector, height, width):
   """
   Broadcasts a pose vector to every pixel of a target image.
@@ -66,17 +70,28 @@ def broadcast_encoding(vector, height, width):
   return vector
 
 
+# sampling utilities
+
+def eta_g(canvas,
+          kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+          channels=PARAMS.IMG_CHANNELS,
+          scope="eta_g"):
+  return tf.layers.conv2d(
+    canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
+    name=scope)
+
+
 @optional_scope
 def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
-  Computes sufficient statistics of a normal distribution (mu, sigma) from a hidden state
-  representation via convolution.
+  Computes sufficient statistics of a normal distribution (mu, sigma) from a
+  hidden state representation via convolution.
   """
   # TODO(stefan,ogroth): activation not specified in the paper, guess: linear
   eta = tf.layers.conv2d( # 2 * channels because mu and sigma need to be computed per channel
       h, filters=2*channels, kernel_size=kernel_size, padding='SAME')
   mu, sigma = tf.split(eta, num_or_size_splits=2, axis=-1)
-  sigma = tf.nn.elu(sigma) + tf.constant(1.0, dtype=tf.float32)  # ensuring sigma > 0
+  sigma = tf.nn.elu(sigma) + 1.0  # ensuring sigma > 0
 
   return mu, sigma
 
@@ -108,3 +123,28 @@ def sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS)
   """
   _, _, z = compute_eta_and_sample_z(h, kernel_size)
   return z
+
+
+# visualization utilities
+
+_BAR_WIDTH = 2
+
+
+def debug_canvas_image(canvases, eta_g_scope='GQN'):
+  with tf.variable_scope(eta_g_scope, reuse=True, auxiliary_name_scope=False), \
+      tf.name_scope('debug'):
+    mean_images = []
+
+    with tf.name_scope('MakeWhiteBar'):
+      cs = tf.shape(canvases[0])
+      batch, height, channels = cs[0], cs[1], 3
+      white_vertical_bar = tf.ones(
+          shape=(batch, height, _BAR_WIDTH, channels),
+          dtype=tf.float32,
+          name='white_bar')
+
+    for canvas in canvases:
+      mean_images.append(eta_g(canvas))
+      mean_images.append(white_vertical_bar)
+
+    return tf.concat(mean_images[:-1], axis=-2, name='MakeGrid')

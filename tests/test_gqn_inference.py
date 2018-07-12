@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_rnn import inference_rnn
+from gqn.gqn_draw import inference_rnn
 
 # constants
 _BATCH_SIZE = 1

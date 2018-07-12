@@ -19,7 +19,7 @@ import tensorflow as tf
 
 from .gqn_params import _GQNParams
 from .gqn_encoder import tower_encoder, pool_encoder
-from .gqn_rnn import inference_rnn, generator_rnn
+from .gqn_draw import inference_rnn, generator_rnn
 from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
 from .gqn_vae_decoder import vae_tower_decoder
 
@@ -41,7 +41,6 @@ def _pack_context(context_poses, context_frames, model_params):
 
 def _reduce_packed_representation(enc_r_packed, model_params):
   # shorthand notations for model parameters
-  _BATCH_SIZE = model_params.BATCH_SIZE
   _CONTEXT_SIZE = model_params.CONTEXT_SIZE
   _DIM_C_ENC = model_params.ENC_CHANNELS
 
@@ -49,7 +48,7 @@ def _reduce_packed_representation(enc_r_packed, model_params):
 
   enc_r_unpacked = tf.reshape(
     enc_r_packed,
-    shape=[_BATCH_SIZE, _CONTEXT_SIZE, height, width, _DIM_C_ENC])
+    shape=[-1, _CONTEXT_SIZE, height, width, _DIM_C_ENC])
 
   # add scene representations per data tuple
   enc_r = tf.reduce_sum(enc_r_unpacked, axis=1)

@@ -91,5 +91,5 @@ with tf.Session() as sess:
       print("Gradient shapes:")
       for _grad, _var in _grad_vars:
         print(_grad.shape, _var.shape)
-    print("Training step: %d" % (step+1, ))
+    print("Training step: %d" % (step + 1, ))
     print(_elbo)

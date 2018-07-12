@@ -56,6 +56,7 @@ def broadcast_pose(vector, height, width):
   vector = tf.tile(vector, [1, height, width, 1])
   return vector
 
+
 def broadcast_encoding(vector, height, width):
   """
   Broadcasts a scene encoding to every pixel of a target image.

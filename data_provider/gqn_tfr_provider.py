@@ -429,18 +429,19 @@ class GQNTFRecordDataset(tf.data.Dataset):
     return self._dataset.output_types
 
 
-def input_fn(dataset,
-             context_size,
-             root,
-             mode,
-             batch_size=1,
-             num_epochs=1,
-             # Optionally reshape frames
-             custom_frame_size=None,
-             # Queue params
-             num_threads=4,
-             buffer_size=256,
-             seed=None):
+def gqn_input_fn(
+    dataset,
+    context_size,
+    root,
+    mode,
+    batch_size=1,
+    num_epochs=1,
+    # Optionally reshape frames
+    custom_frame_size=None,
+    # Queue params
+    num_threads=4,
+    buffer_size=256,
+    seed=None):
   """
   Creates a tf.data.Dataset based op that returns data.
     Args:

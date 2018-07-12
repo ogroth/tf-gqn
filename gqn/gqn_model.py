@@ -18,7 +18,7 @@ from __future__ import print_function
 import tensorflow as tf
 
 from .gqn_graph import gqn
-from gqn.gqn_objective import gqn_elbo
+from .gqn_objective import gqn_elbo
 from .gqn_params import _GQNParams
 
 

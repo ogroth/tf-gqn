@@ -42,15 +42,23 @@ ARGPARSER.add_argument(
     help='The number of data points per batch. One data point is a tuple of \
     ((query_camera_pose, [(context_frame, context_camera_pose)]), target_frame).')
 ARGPARSER.add_argument(
-    '--memcap', type=float, default=0.8,
+    '--memcap', type=float, default=1.0,
     help='Maximum fraction of memory to allocate per GPU.')
 # data loading
 ARGPARSER.add_argument(
-    '--queue_threads', type=int, default=4,
+    '--queue_threads', type=int, default=8,
     help='How many parallel threads to run for data queuing.')
 ARGPARSER.add_argument(
     '--queue_buffer', type=int, default=256,
     help='How many batches to queue up.')
+# logging
+ARGPARSER.add_argument(
+    '--log_steps', type=int, default=100,
+    help='Global steps between log output.')
+ARGPARSER.add_argument(
+    '--debug', default=False, action='store_true',
+    help="Enables debugging mode for more verbose logging and tensorboard \
+    output")
 
 
 def main(unparsed_argv):
@@ -68,10 +76,11 @@ def main(unparsed_argv):
   sess_config = tf.ConfigProto(gpu_options=gpu_options)
   run_config = tf.estimator.RunConfig(
       session_config=sess_config,
-      save_checkpoints_secs=1e9 #TODO: make parameter
+      save_checkpoints_secs=1e9  #TODO(ogroth): make parameter
   )
   model_params = {
       'gqn_params' : PARAMS,
+      'debug' : FLAGS.debug,
   }
   classifier = tf.estimator.Estimator(
       model_fn=gqn_model_fn,
@@ -84,11 +93,13 @@ def main(unparsed_argv):
   for _ in range(FLAGS.train_epochs):
 
     # create logging hooks
-    # tensors_to_log = {
-    #     'logits' : 'logits'
-    # }
-    # logging_hook = tf.train.LoggingTensorHook(
-    #     tensors=tensors_to_log, every_n_iter=1000) #TODO: make parameter
+    tensors_to_log = {
+        'target_sample' : 'target_sample'
+    }
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log,
+        every_n_iter=FLAGS.log_steps
+    )
 
     # train the model for one epoch
     train_input = lambda: gqn_input_fn(
@@ -103,7 +114,7 @@ def main(unparsed_argv):
     )
     classifier.train(
         input_fn=train_input,
-        # hooks=[logging_hook],
+        hooks=[logging_hook],
     )
 
     # evaluate the model on the validation set

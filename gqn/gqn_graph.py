@@ -167,8 +167,8 @@ def gqn_vae(
 
     mu_z, sigma_z, z = compute_eta_and_sample_z(
       enc_r, channels=model_params.Z_CHANNELS, scope="Sample_eta")
-    endpoints['mu'] = mu_z
-    endpoints['sigma'] = sigma_z
+    endpoints['mu_q'] = mu_z
+    endpoints['sigma_q'] = sigma_z
 
     mu_target, decoder_ep = vae_tower_decoder(z, query_pose)
     endpoints.update(decoder_ep)

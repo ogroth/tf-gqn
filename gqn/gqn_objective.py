@@ -61,3 +61,46 @@ def gqn_elbo(
   # kl_regularizer = tf.Print(input_=kl_regularizer, data=[kl_regularizer])  # debug
   elbo = target_llh + kl_regularizer
   return elbo
+
+
+def gqn_vae_elbo(
+  mu_target: tf.Tensor, sigma_target: tf.Tensor,
+  mu_q: tf.Tensor, sigma_q: tf.Tensor,
+  target_frame: tf.Tensor):
+  """
+  Defines the ELBO of the GQN-VAE baseline graph.
+
+  Arguments:
+    mu_target: The mean parameterizing the final image sampling.
+    sigma_target: The sigma parameterizing the final image sampling.
+    mu_q: A list of mus parameterizing the posterior for every image generation step.
+    sigma_q: A list of sigmas parameterizing the posterior for every image generation step.
+    target_frame: The ground truth target frame to produce (i.e. the 'label').
+
+  Returns:
+    elbo: Scalar. Expected value over the negative log-likelihood of the target frame given \
+      the target distribution regularized by the cumulative KL divergence between posterior \
+      and prior distributions at every image generation step.
+  """
+  # negative log-likelihood of target frame given target distribution
+  target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
+  target_llh = tf.identity(
+  input=-tf.reduce_sum(
+    tf.reduce_mean(target_normal.log_prob(target_frame), axis=0)),
+  name='target_llh')
+
+  # KL divergence regularizer
+  # TODO(ogroth): use closed-form version with unit-gaussian
+  posterior_normal = tf.distributions.Normal(loc=mu_q, scale=sigma_q)
+  prior_normal = tf.distributions.Normal(loc=tf.zeros_like(mu_q),
+                                         scale=tf.ones_line(sigma_q))
+  kl_div = tf.distributions.kl_divergence(posterior_normal, prior_normal)
+  kl_regularizer = tf.identity(
+  input=tf.reduce_sum(
+    tf.reduce_mean(tf.add_n(kl_div), axis=0)),
+  name='kl_regularizer')
+
+  # final ELBO term
+  elbo = target_llh + kl_regularizer
+  return elbo
+

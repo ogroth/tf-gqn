@@ -20,6 +20,7 @@ import tensorflow as tf
 from .gqn_graph import gqn
 from .gqn_objective import gqn_elbo
 from .gqn_params import _GQNParams
+from .gqn_utils import debug_canvas_image
 
 
 def _linear_annealing_scheme(gqn_params: _GQNParams) -> tf.Tensor:
@@ -48,8 +49,8 @@ def gqn_model_fn(features, labels, mode, params):
     params:
       gqn_params: _GQNParams type containing the model parameters
       debug: bool; if true, model will produce additional debug output
-        tensorboard summaries for image generation process 
-  
+        tensorboard summaries for image generation process
+
   Returns:
     spec: tf.estimator.EstimatorSpec
   """
@@ -84,9 +85,22 @@ def gqn_model_fn(features, labels, mode, params):
   mu_target = net
   sigma_target = _linear_annealing_scheme(params['gqn_params'])
   target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
-  target_sample = target_normal.sample()
-  # image generation steps in debug mode
-  # TODO(ogroth): add sampling from intermediate endpoints
+  target_sample = tf.identity(target_normal.sample(), name='target_sample')
+  # write out image summaries in debug mode
+  if params['debug']:
+    tf.summary.image(
+        'target_images',
+        labels,
+        max_outputs=1
+    )
+    generator_sequence = debug_canvas_image(
+        [ep_gqn['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]
+    )
+    tf.summary.image(
+        'generator_sequence',
+        generator_sequence,
+        max_outputs=1
+    )
 
   # predictions to make when deployed during test time
   if mode == tf.estimator.ModeKeys.PREDICT:
@@ -125,17 +139,17 @@ def gqn_model_fn(features, labels, mode, params):
   # create SpecSheet
   if mode == tf.estimator.ModeKeys.TRAIN:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      loss=elbo,
-      train_op=train_op)
+        mode=mode,
+        loss=elbo,
+        train_op=train_op)
   if mode == tf.estimator.ModeKeys.EVAL:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      loss=elbo,
-      eval_metric_ops=eval_metric_ops)
+        mode=mode,
+        loss=elbo,
+        eval_metric_ops=eval_metric_ops)
   if mode == tf.estimator.ModeKeys.PREDICT:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      predictions=predictions)
+        mode=mode,
+        predictions=predictions)
 
   return estimator_spec

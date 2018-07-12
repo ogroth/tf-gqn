@@ -138,11 +138,12 @@ def debug_canvas_image(canvases, eta_g_scope='GQN'):
     with tf.name_scope('MakeWhiteBar'):
       cs = tf.shape(canvases[0])
       batch, height, channels = cs[0], cs[1], 3
-      white_vertical_bar = tf.ones(shape=(batch, height, _BAR_WIDTH, channels), 
-                                    dtype=tf.float32,
-                                    name='white_bar')
+      white_vertical_bar = tf.ones(
+          shape=(batch, height, _BAR_WIDTH, channels),
+          dtype=tf.float32,
+          name='white_bar')
 
-    for canvas in canvases:   
+    for canvas in canvases:
       mean_images.append(eta_g(canvas))
       mean_images.append(white_vertical_bar)
 

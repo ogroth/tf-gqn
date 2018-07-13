@@ -29,9 +29,12 @@ _DEFAULTS = {
     'GENERATOR_INPUT_CHANNELS' : 327,  # pose + representation + z
     'INFERENCE_INPUT_CHANNELS' : 263,  # pose + representation
     'SEQ_LENGTH' : 12,  # number of steps in image generation sequence
+    # hyper-parameters: ADAM optimization
+    'ANNEAL_TAU' : 200000,  # annealing interval for noise and learning rate
     'GENERATOR_SIGMA_ALPHA' : 2.0,  # start value for global generation variance
     'GENERATOR_SIGMA_BETA' : 0.7,  # final value for global generation variance
-    'GENERATOR_SIGMA_TAU' : 200000,  # annealing interval between sigma_alpha and sigma_beta
+    'ADAM_LR_ALPHA' : 5 * 10e-4,  # start learning rate of ADAM optimizer
+    'ADAM_LR_BETA' : 5 * 10e-5,  # final learning rate of ADAM optimizer
 }
 
 _GQNParams = collections.namedtuple(

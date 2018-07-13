@@ -74,7 +74,7 @@ def _encode_context(encoder_fn, context_poses, context_frames, model_params):
   return enc_r, endpoints
 
 
-def gqn(
+def gqn_draw(
     query_pose: tf.Tensor, target_frame: tf.Tensor,
     context_poses: tf.Tensor, context_frames: tf.Tensor,
     model_params: _GQNParams, is_training: bool = True,

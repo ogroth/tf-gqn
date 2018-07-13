@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_graph import gqn
+from gqn.gqn_graph import gqn_draw
 
 
 # constants
@@ -40,7 +40,7 @@ query_pose, target_frame, context_poses, context_frames = \
     create_input_placeholders()
 
 # graph definition in training mode
-net, ep_gqn = gqn(
+net, ep_gqn = gqn_draw(
     query_pose=query_pose,
     target_frame=target_frame,
     context_poses=context_poses,
@@ -86,7 +86,7 @@ query_pose, target_frame, context_poses, context_frames = \
   create_input_placeholders()
 
 # graph definition in test mode
-net, ep_gqn = gqn(
+net, ep_gqn = gqn_draw(
   query_pose=query_pose,
   target_frame=target_frame,
   context_poses=context_poses,

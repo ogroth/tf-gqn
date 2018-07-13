@@ -14,8 +14,8 @@ import tensorflow as tf
 
 # assumes tf-gqn path to live in PYTHONPATH!
 from gqn.gqn_params import PARAMS
-from gqn.gqn_graph import gqn
-from gqn.gqn_objective import gqn_elbo
+from gqn.gqn_graph import gqn_draw
+from gqn.gqn_objective import gqn_draw_elbo
 from data_provider.gqn_tfr_provider import DataReader
 
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
   context_frames = data.query.context.frames
 
   # graph definition
-  net, ep_gqn = gqn(
+  net, ep_gqn = gqn_draw(
       query_pose=query_pose,
       target_frame=target_frame,
       context_poses=context_poses,
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     sigma_q.append(ep_gqn["sigma_q_%d" % i])
     mu_pi.append(ep_gqn["mu_pi_%d" % i])
     sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
-  elbo = gqn_elbo(
+  elbo = gqn_draw_elbo(
       mu_target, sigma_target,
       mu_q, sigma_q,
       mu_pi, sigma_pi,

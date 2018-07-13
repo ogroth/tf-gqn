@@ -13,7 +13,7 @@ import tensorflow as tf
 TfTensorList = List[tf.Tensor]
 
 
-def gqn_elbo(
+def gqn_draw_elbo(
     mu_target: tf.Tensor, sigma_target: tf.Tensor,
     mu_q: TfTensorList, sigma_q: TfTensorList,
     mu_pi: TfTensorList, sigma_pi: TfTensorList,

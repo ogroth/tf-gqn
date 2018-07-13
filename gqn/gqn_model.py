@@ -17,8 +17,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from .gqn_graph import gqn, gqn_vae
-from .gqn_objective import gqn_elbo, gqn_vae_elbo
+from .gqn_graph import gqn_draw, gqn_vae
+from .gqn_objective import gqn_draw_elbo, gqn_vae_elbo
 from .gqn_params import _GQNParams
 from .gqn_utils import debug_canvas_image
 
@@ -32,13 +32,13 @@ def _linear_annealing_scheme(gqn_params: _GQNParams) -> tf.Tensor:
   anneal_beta = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
   anneal_tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
   anneal_step = tf.minimum(tf.train.get_global_step(), gqn_params.GENERATOR_SIGMA_TAU)
-  anneal_diff =  anneal_alpha - anneal_beta
+  anneal_diff = anneal_alpha - anneal_beta
   anneal_coeff = tf.cast(anneal_step, dtype=tf.float32) / anneal_tau
   sigma_target = anneal_alpha - anneal_coeff * anneal_diff
   return sigma_target
 
 
-def gqn_model_fn(features, labels, mode, params):
+def gqn_draw_model_fn(features, labels, mode, params):
   """
   Defines an tf.estimator.EstimatorSpec for the GQN model.
 
@@ -54,6 +54,7 @@ def gqn_model_fn(features, labels, mode, params):
   Returns:
     spec: tf.estimator.EstimatorSpec
   """
+
   # shorthand notations for parameters
   _SEQ_LENGTH = params['gqn_params'].SEQ_LENGTH
 
@@ -64,7 +65,7 @@ def gqn_model_fn(features, labels, mode, params):
   context_frames = features.context.frames
 
   # graph setup
-  net, ep_gqn = gqn(
+  net, ep_gqn = gqn_draw(
       query_pose=query_pose,
       target_frame=target_frame,
       context_poses=context_poses,
@@ -110,7 +111,7 @@ def gqn_model_fn(features, labels, mode, params):
 
   # ELBO setup
   if mode != tf.estimator.ModeKeys.PREDICT:
-    elbo = gqn_elbo(
+    elbo = gqn_draw_elbo(
         mu_target, sigma_target,
         mu_q, sigma_q,
         mu_pi, sigma_pi,
@@ -132,9 +133,6 @@ def gqn_model_fn(features, labels, mode, params):
             labels=target_frame,
             predictions=target_sample)
     }
-
-  # train & eval summary hooks
-  # TODO(ogroth): add image summaries for intermediate images
 
   # create SpecSheet
   if mode == tf.estimator.ModeKeys.TRAIN:
@@ -171,6 +169,7 @@ def gqn_vae_model_fn(features, labels, mode, params):
   Returns:
     spec: tf.estimator.EstimatorSpec
   """
+
   # feature and label mapping according to gqn_input_fn
   query_pose = features.query_camera
   target_frame = labels
@@ -179,10 +178,10 @@ def gqn_vae_model_fn(features, labels, mode, params):
 
   # graph setup
   net, ep_gqn_vae = gqn_vae(
-    query_pose=query_pose,
-    context_poses=context_poses,
-    context_frames=context_frames,
-    model_params=params['gqn_params'],
+      query_pose=query_pose,
+      context_poses=context_poses,
+      context_frames=context_frames,
+      model_params=params['gqn_params'],
   )
 
   # collect intermediate endpoints
@@ -196,63 +195,60 @@ def gqn_vae_model_fn(features, labels, mode, params):
   # write out image summaries in debug mode
   if params['debug']:
     tf.summary.image(
-      'target_images',
-      labels,
-      max_outputs=1
+        'target_images',
+        labels,
+        max_outputs=1
     )
     tf.summary.image(
-      'target_sample',
-      target_sample,
-      max_outputs=1
+        'target_sample',
+        target_sample,
+        max_outputs=1
     )
 
   # predictions to make when deployed during test time
   if mode == tf.estimator.ModeKeys.PREDICT:
     predictions = {
-      'target_sample' : target_sample
+        'target_sample' : target_sample
     }
 
   # ELBO setup
   if mode != tf.estimator.ModeKeys.PREDICT:
-    elbo_vae = gqn_vae_elbo(
-      mu_target, sigma_target,
-      mu_q, sigma_q,
-      target_frame)
+    elbo = gqn_vae_elbo(
+        mu_target, sigma_target,
+        mu_q, sigma_q,
+        target_frame)
 
   # optimization
   if mode == tf.estimator.ModeKeys.TRAIN:
     # TODO(ogroth): tune hyper-parameters of optimizer?
     optimizer = tf.train.AdamOptimizer()
     train_op = optimizer.minimize(
-      loss=elbo_vae,
-      global_step=tf.train.get_global_step()
+        loss=elbo,
+        global_step=tf.train.get_global_step()
     )
 
   # evaluation metrics to monitor
   if mode == tf.estimator.ModeKeys.EVAL:
     eval_metric_ops = {
-      'mean_abs_pixel_error' : tf.metrics.mean_absolute_error(
-        labels=target_frame,
-        predictions=target_sample)
+        'mean_abs_pixel_error' : tf.metrics.mean_absolute_error(
+            labels=target_frame,
+            predictions=target_sample)
     }
-
-  # train & eval summary hooks
-  # TODO(ogroth): add image summaries for intermediate images
 
   # create SpecSheet
   if mode == tf.estimator.ModeKeys.TRAIN:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      loss=elbo_vae,
-      train_op=train_op)
+        mode=mode,
+        loss=elbo,
+        train_op=train_op)
   if mode == tf.estimator.ModeKeys.EVAL:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      loss=elbo_vae,
-      eval_metric_ops=eval_metric_ops)
+        mode=mode,
+        loss=elbo,
+        eval_metric_ops=eval_metric_ops)
   if mode == tf.estimator.ModeKeys.PREDICT:
     estimator_spec = tf.estimator.EstimatorSpec(
-      mode=mode,
-      predictions=predictions)
+        mode=mode,
+        predictions=predictions)
 
   return estimator_spec

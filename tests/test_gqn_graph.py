@@ -6,7 +6,7 @@ import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_graph import gqn, gqn_vae
+from gqn.gqn_graph import gqn_draw, gqn_vae
 
 # constants
 _BATCH_SIZE = 1
@@ -31,7 +31,7 @@ context_frames = tf.placeholder(
     dtype=tf.float32)
 
 # graph definition
-net, ep_gqn = gqn(
+net, ep_gqn = gqn_draw(
     query_pose=query_pose,
     target_frame=target_frame,
     context_poses=context_poses,

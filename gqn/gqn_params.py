@@ -30,8 +30,8 @@ _DEFAULTS = {
     'INFERENCE_INPUT_CHANNELS' : 263,  # pose + representation
     'SEQ_LENGTH' : 12,  # number of steps in image generation sequence
     'GENERATOR_SIGMA_ALPHA' : 2.0,  # start value for global generation variance
-    'GENERATOR_SIGMA_BETA' : 0.5,  # final value for global generation variance
-    'GENERATOR_SIGMA_TAU' : 100000,  # annealing interval between sigma_alpha and sigma_beta
+    'GENERATOR_SIGMA_BETA' : 0.7,  # final value for global generation variance
+    'GENERATOR_SIGMA_TAU' : 200000,  # annealing interval between sigma_alpha and sigma_beta
 }
 
 _GQNParams = collections.namedtuple(

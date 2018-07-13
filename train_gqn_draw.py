@@ -43,7 +43,7 @@ ARGPARSER.add_argument(
     help='Number of steps between checkpoint saves.')
 # memory management
 ARGPARSER.add_argument(
-    '--batch_size', type=int, default=12,
+    '--batch_size', type=int, default=12,  # 36 reported in GQN paper -> multi-GPU!
     help='The number of data points per batch. One data point is a tuple of \
     ((query_camera_pose, [(context_frame, context_camera_pose)]), target_frame).')
 ARGPARSER.add_argument(

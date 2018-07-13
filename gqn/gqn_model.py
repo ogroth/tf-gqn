@@ -28,13 +28,20 @@ def _linear_annealing_scheme(gqn_params: _GQNParams) -> tf.Tensor:
   Defines the computational graph for the global sigma annealing scheme used in
   image sampling.
   """
-  anneal_alpha = tf.constant(gqn_params.GENERATOR_SIGMA_ALPHA, dtype=tf.float32)
-  anneal_beta = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
-  anneal_tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
-  anneal_step = tf.minimum(tf.train.get_global_step(), gqn_params.GENERATOR_SIGMA_TAU)
-  anneal_diff = anneal_alpha - anneal_beta
-  anneal_coeff = tf.cast(anneal_step, dtype=tf.float32) / anneal_tau
-  sigma_target = anneal_alpha - anneal_coeff * anneal_diff
+  # anneal_alpha = tf.constant(gqn_params.GENERATOR_SIGMA_ALPHA, dtype=tf.float32)
+  # anneal_beta = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
+  # anneal_tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
+  # anneal_step = tf.minimum(tf.train.get_global_step(), gqn_params.GENERATOR_SIGMA_TAU)
+  # anneal_diff = anneal_alpha - anneal_beta
+  # anneal_coeff = tf.cast(anneal_step, dtype=tf.float32) / anneal_tau
+  # sigma_target = anneal_alpha - anneal_coeff * anneal_diff
+  sigma_i = tf.constant(gqn_params.GENERATOR_SIGMA_ALPHA, dtype=tf.float32)
+  sigma_f = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
+  step = tf.cast(tf.train.get_global_step(), dtype=tf.float32)
+  tau = tf.constant(gqn_params.GENERATOR_SIGMA_TAU, dtype=tf.float32)
+  sigma_target = tf.maximum(
+      sigma_f + (sigma_i - sigma_f) * (1.0 - step / tau),
+      sigma_f)
   return sigma_target
 
 

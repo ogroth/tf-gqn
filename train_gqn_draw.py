@@ -97,6 +97,15 @@ def main(unparsed_argv):
   # main loop
   for _ in range(FLAGS.train_epochs):
 
+    # create logging hooks
+    tensors_to_log = {
+        'target_sample' : 'target_sample'
+    }
+    logging_hook = tf.train.LoggingTensorHook(
+        tensors=tensors_to_log,
+        every_n_iter=FLAGS.log_steps
+    )
+
     # evaluate the model on the validation set
     eval_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
@@ -109,15 +118,7 @@ def main(unparsed_argv):
     )
     eval_results = classifier.evaluate(
         input_fn=eval_input,
-    )
-
-    # create logging hooks for training
-    tensors_to_log = {
-        'target_sample' : 'target_sample'
-    }
-    logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log,
-        every_n_iter=FLAGS.log_steps
+        hooks=[logging_hook],
     )
 
     # train the model for one epoch

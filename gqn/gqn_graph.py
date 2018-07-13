@@ -21,7 +21,7 @@ from .gqn_params import _GQNParams
 from .gqn_encoder import tower_encoder, pool_encoder
 from .gqn_draw import inference_rnn, generator_rnn
 from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
-from .gqn_vae_decoder import vae_tower_decoder
+from .gqn_vae import vae_tower_decoder
 
 
 def _pack_context(context_poses, context_frames, model_params):
@@ -34,7 +34,7 @@ def _pack_context(context_poses, context_frames, model_params):
   # pack scene context into pseudo-batch for encoder
   context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
   context_frames_packed = tf.reshape(
-    context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
+      context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
 
   return context_poses_packed, context_frames_packed
 
@@ -47,8 +47,7 @@ def _reduce_packed_representation(enc_r_packed, model_params):
   height, width = tf.shape(enc_r_packed)[1], tf.shape(enc_r_packed)[2]
 
   enc_r_unpacked = tf.reshape(
-    enc_r_packed,
-    shape=[-1, _CONTEXT_SIZE, height, width, _DIM_C_ENC])
+      enc_r_packed, shape=[-1, _CONTEXT_SIZE, height, width, _DIM_C_ENC])
 
   # add scene representations per data tuple
   enc_r = tf.reduce_sum(enc_r_unpacked, axis=1)
@@ -109,13 +108,13 @@ def gqn_draw(
     endpoints = {}
 
     enc_r, endpoints_enc = _encode_context(
-      pool_encoder, context_poses, context_frames, model_params)
+        pool_encoder, context_poses, context_frames, model_params)
     endpoints.update(endpoints_enc)
 
     # broadcast scene representation to 1/4 of targeted frame size
     # TODO(ogroth): only do this when using pool_encoder
     enc_r_broadcast = broadcast_encoding(
-      vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+        vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
 
     # define generator graph (with inference component if in training mode)
     if is_training:
@@ -161,11 +160,11 @@ def gqn_vae(
     endpoints = {}
 
     enc_r, endpoints_enc = _encode_context(
-      tower_encoder, context_poses, context_frames, model_params)
+        tower_encoder, context_poses, context_frames, model_params)
     endpoints.update(endpoints_enc)
 
     mu_z, sigma_z, z = compute_eta_and_sample_z(
-      enc_r, channels=model_params.Z_CHANNELS, scope="Sample_eta")
+        enc_r, channels=model_params.Z_CHANNELS, scope="Sample_eta")
     endpoints['mu_q'] = mu_z
     endpoints['sigma_q'] = sigma_z
 

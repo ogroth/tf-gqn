@@ -476,13 +476,16 @@ def gqn_input_fn(
     str_mode = 'test'
 
   dataset = GQNTFRecordDataset(
-    dataset, context_size, root, str_mode, custom_frame_size, num_threads,
-    buffer_size)
+      dataset, context_size, root, str_mode, custom_frame_size, num_threads,
+      buffer_size)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
-    dataset = dataset.shuffle(buffer_size=buffer_size, seed=seed)
+    dataset = dataset.shuffle(buffer_size=(buffer_size * batch_size), seed=seed)
 
-  dataset = dataset.batch(batch_size).repeat(num_epochs).prefetch(buffer_size)
+  dataset = dataset.prefetch(buffer_size * batch_size)
+  dataset = dataset.repeat(num_epochs)
+  dataset = dataset.batch(batch_size)
+  # dataset = dataset.batch(batch_size).repeat(num_epochs).prefetch(buffer_size)
 
   it = dataset.make_one_shot_iterator()
 

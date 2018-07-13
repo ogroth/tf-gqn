@@ -85,16 +85,8 @@ def gqn_draw_model_fn(features, labels, mode, params):
       context_poses=context_poses,
       context_frames=context_frames,
       model_params=params['gqn_params'],
-      is_training=(mode == tf.estimator.ModeKeys.TRAIN)
+      is_training=(mode != tf.estimator.ModeKeys.PREDICT)
   )
-
-  # collect intermediate endpoints
-  mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
-  for i in range(_SEQ_LENGTH):
-    mu_q.append(ep_gqn["mu_q_%d" % i])
-    sigma_q.append(ep_gqn["sigma_q_%d" % i])
-    mu_pi.append(ep_gqn["mu_pi_%d" % i])
-    sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
 
   # outputs: sampled images
   mu_target = net
@@ -125,6 +117,13 @@ def gqn_draw_model_fn(features, labels, mode, params):
 
   # ELBO setup
   if mode != tf.estimator.ModeKeys.PREDICT:
+    # collect intermediate endpoints
+    mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
+    for i in range(_SEQ_LENGTH):
+      mu_q.append(ep_gqn["mu_q_%d" % i])
+      sigma_q.append(ep_gqn["sigma_q_%d" % i])
+      mu_pi.append(ep_gqn["mu_pi_%d" % i])
+      sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
     elbo = gqn_draw_elbo(
         mu_target, sigma_target,
         mu_q, sigma_q,

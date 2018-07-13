@@ -12,8 +12,9 @@ import argparse
 import tensorflow as tf
 
 from gqn.gqn_model import gqn_vae_model_fn
-from data_provider.gqn_tfr_provider import gqn_input_fn
 from gqn.gqn_params import PARAMS
+from data_provider.gqn_tfr_provider import gqn_input_fn
+
 
 # command line argument parser
 ARGPARSER = argparse.ArgumentParser(
@@ -36,6 +37,10 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--train_epochs', type=int, default=40,
     help='The number of epochs to train.')
+# snapshot parameters
+ARGPARSER.add_argument(
+    '--chkpt_steps', type=int, default=10000,
+    help='Number of steps between checkpoint saves.')
 # memory management
 ARGPARSER.add_argument(
     '--batch_size', type=int, default=12,
@@ -76,7 +81,7 @@ def main(unparsed_argv):
   sess_config = tf.ConfigProto(gpu_options=gpu_options)
   run_config = tf.estimator.RunConfig(
       session_config=sess_config,
-      save_checkpoints_secs=1e9  #TODO(ogroth): make parameter
+      save_checkpoints_steps=FLAGS.chkpt_steps,
   )
   model_params = {
       'gqn_params' : PARAMS,
@@ -92,7 +97,22 @@ def main(unparsed_argv):
   # main loop
   for _ in range(FLAGS.train_epochs):
 
-    # create logging hooks
+    # evaluate the model on the validation set
+    eval_input = lambda: gqn_input_fn(
+        dataset=FLAGS.dataset,
+        context_size=PARAMS.CONTEXT_SIZE,
+        root=FLAGS.data_dir,
+        mode=tf.estimator.ModeKeys.EVAL,
+        batch_size=FLAGS.batch_size,
+        num_epochs=FLAGS.train_epochs,
+        num_threads=FLAGS.queue_threads,
+        buffer_size=FLAGS.queue_buffer,
+    )
+    eval_results = classifier.evaluate(
+        input_fn=eval_input,
+    )
+
+    # create logging hooks for training
     tensors_to_log = {
         'target_sample' : 'target_sample'
     }
@@ -115,21 +135,6 @@ def main(unparsed_argv):
     classifier.train(
         input_fn=train_input,
         hooks=[logging_hook],
-    )
-
-    # evaluate the model on the validation set
-    eval_input = lambda: gqn_input_fn(
-        dataset=FLAGS.dataset,
-        context_size=PARAMS.CONTEXT_SIZE,
-        root=FLAGS.data_dir,
-        mode=tf.estimator.ModeKeys.EVAL,
-        batch_size=FLAGS.batch_size,
-        num_epochs=FLAGS.train_epochs,
-        num_threads=FLAGS.queue_threads,
-        buffer_size=FLAGS.queue_buffer,
-    )
-    eval_results = classifier.evaluate(
-        input_fn=eval_input,
     )
 
 

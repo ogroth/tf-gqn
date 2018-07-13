@@ -63,7 +63,10 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--debug', default=False, action='store_true',
     help="Enables debugging mode for more verbose logging and tensorboard \
-    output")
+    output.")
+ARGPARSER.add_argument(
+    '--initial_eval', default=False, action='store_true',
+    help="Runs an evaluation before the first training iteration.")
 
 
 def main(unparsed_argv):
@@ -94,19 +97,17 @@ def main(unparsed_argv):
       params=model_params,
   )
 
-  # main loop
-  for _ in range(FLAGS.train_epochs):
+  # create logging hooks
+  tensors_to_log = {
+      'target_sample' : 'target_sample'
+  }
+  logging_hook = tf.train.LoggingTensorHook(
+      tensors=tensors_to_log,
+      every_n_iter=FLAGS.log_steps
+  )
 
-    # create logging hooks
-    tensors_to_log = {
-        'target_sample' : 'target_sample'
-    }
-    logging_hook = tf.train.LoggingTensorHook(
-        tensors=tensors_to_log,
-        every_n_iter=FLAGS.log_steps
-    )
-
-    # evaluate the model on the validation set
+  # optional initial evaluation
+  if FLAGS.initial_eval:
     eval_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
         context_size=PARAMS.CONTEXT_SIZE,
@@ -121,6 +122,9 @@ def main(unparsed_argv):
         hooks=[logging_hook],
     )
 
+  # main loop
+  for _ in range(FLAGS.train_epochs):
+
     # train the model for one epoch
     train_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
@@ -134,6 +138,21 @@ def main(unparsed_argv):
     )
     classifier.train(
         input_fn=train_input,
+        hooks=[logging_hook],
+    )
+
+    # evaluate the model on the validation set
+    eval_input = lambda: gqn_input_fn(
+        dataset=FLAGS.dataset,
+        context_size=PARAMS.CONTEXT_SIZE,
+        root=FLAGS.data_dir,
+        mode=tf.estimator.ModeKeys.EVAL,
+        batch_size=FLAGS.batch_size,
+        num_threads=FLAGS.queue_threads,
+        buffer_size=FLAGS.queue_buffer,
+    )
+    eval_results = classifier.evaluate(
+        input_fn=eval_input,
         hooks=[logging_hook],
     )
 

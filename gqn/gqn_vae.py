@@ -15,6 +15,10 @@ from .gqn_utils import broadcast_pose
 def vae_tower_decoder(
     z, query_pose, output_channels=PARAMS.LSTM_CANVAS_CHANNELS,
     scope="VAETowerDecoder"):
+  """
+  Defines VAE tower decoder graph for image generation based on a GQN scene \
+  encoding.
+  """
   with tf.variable_scope(scope):
     endpoints = {}
 

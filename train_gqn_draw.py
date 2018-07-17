@@ -43,7 +43,7 @@ ARGPARSER.add_argument(
     help='Number of steps between checkpoint saves.')
 # memory management
 ARGPARSER.add_argument(
-    '--batch_size', type=int, default=12,  # 36 reported in GQN paper -> multi-GPU!
+    '--batch_size', type=int, default=36,  # 36 reported in GQN paper -> multi-GPU?
     help='The number of data points per batch. One data point is a tuple of \
     ((query_camera_pose, [(context_frame, context_camera_pose)]), target_frame).')
 ARGPARSER.add_argument(
@@ -51,10 +51,10 @@ ARGPARSER.add_argument(
     help='Maximum fraction of memory to allocate per GPU.')
 # data loading
 ARGPARSER.add_argument(
-    '--queue_threads', type=int, default=8,
+    '--queue_threads', type=int, default=4,
     help='How many parallel threads to run for data queuing.')
 ARGPARSER.add_argument(
-    '--queue_buffer', type=int, default=256,
+    '--queue_buffer', type=int, default=64,
     help='How many batches to queue up.')
 # logging
 ARGPARSER.add_argument(

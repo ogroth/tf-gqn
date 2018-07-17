@@ -130,7 +130,10 @@ def sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS)
 _BAR_WIDTH = 2
 
 
-def debug_canvas_image(canvases, eta_g_scope='GQN'):
+def debug_canvas_image_mean(canvases, eta_g_scope='GQN'):
+  """
+  Projects the canvas into mean images.
+  """
   with tf.variable_scope(eta_g_scope, reuse=True, auxiliary_name_scope=False), \
       tf.name_scope('debug'):
     mean_images = []

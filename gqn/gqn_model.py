@@ -136,11 +136,20 @@ def gqn_draw_model_fn(features, labels, mode, params):
       sigma_q.append(ep_gqn["sigma_q_%d" % i])
       mu_pi.append(ep_gqn["mu_pi_%d" % i])
       sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
-    elbo = gqn_draw_elbo(
+    elbo, ep_elbo = gqn_draw_elbo(
         mu_target, sigma_target,
         mu_q, sigma_q,
         mu_pi, sigma_pi,
         target_frame)
+    if params['debug']:
+      tf.summary.scalar(
+          name='target_llh',
+          tensor=ep_elbo['target_llh']
+      )
+      tf.summary.scalar(
+          name='kl_regularizer',
+          tensor=ep_elbo['kl_regularizer']
+      )
 
   # optimization
   if mode == tf.estimator.ModeKeys.TRAIN:

@@ -31,7 +31,7 @@ def _linear_noise_annealing(gqn_params: _GQNParams) -> tf.Tensor:
   sigma_i = tf.constant(gqn_params.GENERATOR_SIGMA_ALPHA, dtype=tf.float32)
   sigma_f = tf.constant(gqn_params.GENERATOR_SIGMA_BETA, dtype=tf.float32)
   step = tf.cast(tf.train.get_global_step(), dtype=tf.float32)
-  tau = tf.constant(gqn_params.ANNEAL_TAU, dtype=tf.float32)
+  tau = tf.constant(gqn_params.ANNEAL_SIGMA_TAU, dtype=tf.float32)
   sigma_target = tf.maximum(
       sigma_f + (sigma_i - sigma_f) * (1.0 - step / tau),
       sigma_f)
@@ -45,7 +45,7 @@ def _linear_lr_annealing(gqn_params: _GQNParams) -> tf.Tensor:
   eta_i = tf.constant(gqn_params.ADAM_LR_ALPHA, dtype=tf.float32)
   eta_f = tf.constant(gqn_params.ADAM_LR_BETA, dtype=tf.float32)
   step = tf.cast(tf.train.get_global_step(), dtype=tf.float32)
-  tau = tf.constant(gqn_params.ANNEAL_TAU, dtype=tf.float32)
+  tau = tf.constant(gqn_params.ANNEAL_LR_TAU, dtype=tf.float32)
   lr = tf.maximum(
       eta_f + (eta_i - eta_f) * (1.0 - step / tau),
       eta_f)

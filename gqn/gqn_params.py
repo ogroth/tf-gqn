@@ -30,9 +30,10 @@ _DEFAULTS = {
     'INFERENCE_INPUT_CHANNELS' : 263,  # pose + representation
     'SEQ_LENGTH' : 12,  # number of steps in image generation sequence
     # hyper-parameters: ADAM optimization
-    'ANNEAL_TAU' : 200000,  # annealing interval for noise and learning rate
+    'ANNEAL_SIGMA_TAU' : 200000,  # annealing interval for global noise
     'GENERATOR_SIGMA_ALPHA' : 2.0,  # start value for global generation variance
     'GENERATOR_SIGMA_BETA' : 0.7,  # final value for global generation variance
+    'ANNEAL_LR_TAU' : 1600000,  # annealing interval for learning rate
     'ADAM_LR_ALPHA' : 5 * 10e-4,  # start learning rate of ADAM optimizer
     'ADAM_LR_BETA' : 5 * 10e-5,  # final learning rate of ADAM optimizer
 }

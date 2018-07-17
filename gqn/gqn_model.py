@@ -20,7 +20,7 @@ import tensorflow as tf
 from .gqn_graph import gqn_draw, gqn_vae
 from .gqn_objective import gqn_draw_elbo, gqn_vae_elbo
 from .gqn_params import _GQNParams
-from .gqn_utils import debug_canvas_image
+from .gqn_utils import debug_canvas_image_mean
 
 
 def _linear_noise_annealing(gqn_params: _GQNParams) -> tf.Tensor:
@@ -70,6 +70,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
   """
 
   # shorthand notations for parameters
+  _CONTEXT_SIZE = params['gqn_params'].CONTEXT_SIZE
   _SEQ_LENGTH = params['gqn_params'].SEQ_LENGTH
 
   # feature and label mapping according to gqn_input_fn
@@ -95,16 +96,27 @@ def gqn_draw_model_fn(features, labels, mode, params):
   target_sample = tf.identity(target_normal.sample(), name='target_sample')
   # write out image summaries in debug mode
   if params['debug']:
+    for i in range(_CONTEXT_SIZE):
+      tf.summary.image(
+          'context_frame_%d' % (i + 1),
+          context_frames[:, i],
+          max_outputs=1
+      )
     tf.summary.image(
         'target_images',
         labels,
         max_outputs=1
     )
-    generator_sequence = debug_canvas_image(
+    tf.summary.image(
+        'target_means',
+        mu_target,
+        max_outputs=1
+    )
+    generator_sequence = debug_canvas_image_mean(
         [ep_gqn['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]
     )
     tf.summary.image(
-        'generator_sequence',
+        'generator_sequence_mean',
         generator_sequence,
         max_outputs=1
     )
@@ -144,7 +156,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
     eval_metric_ops = {
         'mean_abs_pixel_error' : tf.metrics.mean_absolute_error(
             labels=target_frame,
-            predictions=target_sample)
+            predictions=mu_target)
     }
 
   # create SpecSheet

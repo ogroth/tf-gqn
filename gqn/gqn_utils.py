@@ -26,14 +26,14 @@ def add_scope(fn, scope):
 
 def optional_scope_default(default_scope=None):
   # TODO(stefan): add docstring
-    def _optional_scope(fn):
-        def extract_and_add_scope(*args, **kwargs):
-            scope = kwargs.pop("scope", default_scope)
-            return add_scope(fn, scope)(*args, **kwargs)
+  def _optional_scope(fn):
+    def extract_and_add_scope(*args, **kwargs):
+      scope = kwargs.pop("scope", default_scope)
+      return add_scope(fn, scope)(*args, **kwargs)
 
-        return extract_and_add_scope
+    return extract_and_add_scope
 
-    return _optional_scope
+  return _optional_scope
 
 
 optional_scope = optional_scope_default(None)
@@ -77,8 +77,8 @@ def eta_g(canvas,
           channels=PARAMS.IMG_CHANNELS,
           scope="eta_g"):
   return tf.layers.conv2d(
-    canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
-    name=scope)
+      canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
+      name=scope)
 
 
 @optional_scope
@@ -91,7 +91,8 @@ def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   eta = tf.layers.conv2d( # 2 * channels because mu and sigma need to be computed per channel
       h, filters=2*channels, kernel_size=kernel_size, padding='SAME')
   mu, sigma = tf.split(eta, num_or_size_splits=2, axis=-1)
-  sigma = tf.nn.elu(sigma) + 1.0  # ensuring sigma > 0
+  # sigma = tf.nn.elu(sigma) + 1.0  # ensuring sigma > 0
+  sigma = tf.nn.softplus(sigma + .5) + 1e-8  # TODO(ogroth): check
 
   return mu, sigma
 

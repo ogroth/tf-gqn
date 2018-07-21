@@ -59,7 +59,7 @@ def _encode_context(encoder_fn, context_poses, context_frames, model_params):
   endpoints = {}
 
   context_poses_packed, context_frames_packed = _pack_context(
-    context_poses, context_frames, model_params)
+      context_poses, context_frames, model_params)
 
   # define scene encoding graph psi
   enc_r_packed, endpoints_psi = encoder_fn(context_frames_packed,

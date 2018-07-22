@@ -12,6 +12,59 @@ from .gqn_params import PARAMS
 from .gqn_utils import broadcast_pose
 
 
+def vae_simple_encoder(x, scope="VAESimpleEncoder"):
+  with tf.variable_scope(scope):
+    endpoints = {}
+
+    net = x  # shape (b, 64, 64, 3)
+    net = tf.layers.conv2d(
+      net, kernel_size=3, filters=512, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 64, 64, 512)
+    net = tf.layers.conv2d(
+      net, kernel_size=3, filters=64, strides=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 32, 32, 64)
+    net = tf.layers.conv2d(
+      net, kernel_size=3, filters=128, strides=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 16, 16, 128)
+    net = tf.layers.conv2d(
+      net, kernel_size=5, filters=512, strides=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 8, 8, 512)
+
+    # to go from (8, 8, 512) to (1, 1, 256), we do a regular strided convolution
+    # and move the extra spatial information to channels
+    net = tf.layers.conv2d(
+      net, kernel_size=5, filters=16, strides=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 4, 4, 16)
+    net = tf.space_to_depth(net, block_size=4)  # shape out: (b, 1, 1, 256)
+
+    return net, endpoints
+
+
+def vae_simple_decoder(z, scope="VAESimpleDecoder"):
+  def _upsample_conv2d(net, factor, filters, **kwargs):
+    net = tf.layers.conv2d(net, filters=factor*factor*filters, **kwargs)
+    net = tf.depth_to_space(net, block_size=factor)
+
+    return net
+
+  with tf.variable_scope(scope):
+    endpoints = {}
+
+    net = z  # shape (b, 1, 1, c)
+    net = _upsample_conv2d(
+      net, kernel_size=3, filters=128, factor=16, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 16, 16, 128)
+    net = _upsample_conv2d(
+      net, kernel_size=3, filters=512, factor=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 32, 32, 512)
+    net = _upsample_conv2d(
+      net, kernel_size=3, filters=512, factor=2, activation=tf.nn.relu,
+      padding="SAME")  # shape out: (b, 64, 64, 512)
+    net = tf.layers.conv2d(net, kernel_size=3, filters=3, padding="SAME")
+
+    return net, endpoints
+
+
 def vae_tower_decoder(
     z, query_pose, output_channels=PARAMS.LSTM_CANVAS_CHANNELS,
     scope="VAETowerDecoder"):

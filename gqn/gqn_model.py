@@ -219,8 +219,8 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   # feature and label mapping according to gqn_input_fn
   query_pose = features.query_camera
   target_frame = labels
-  context_poses = [features.query_camera]
-  context_frames = [labels]
+  context_poses = features.query_camera
+  context_frames = labels
 
   # graph setup
   net, ep_gqn = gqn_draw(
@@ -242,7 +242,7 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
     for i in range(_CONTEXT_SIZE):
       tf.summary.image(
           'context_frame_%d' % (i + 1),
-          context_frames[:, i],
+          context_frames,
           max_outputs=1
       )
     tf.summary.image(

@@ -29,6 +29,9 @@ _DEFAULTS = {
     'GENERATOR_INPUT_CHANNELS' : 327,  # pose + representation + z
     'INFERENCE_INPUT_CHANNELS' : 263,  # pose + representation
     'SEQ_LENGTH' : 4,  # number of steps in image generation sequence, orig.: 12
+    # hyper-parameters: eta functions
+    'ETA_INTERNAL_KERNEL_SIZE' : 5,  # TODO(ogroth): map to internal eta functions
+    'ETA_EXTERNAL_KERNEL_SIZE' : 1,  # kernel size for final projection of canvas to mean image
     # hyper-parameters: ADAM optimization
     'ANNEAL_SIGMA_TAU' : 200000,  # annealing interval for global noise
     'GENERATOR_SIGMA_ALPHA' : 2.0,  # start value for global generation variance

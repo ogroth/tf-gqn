@@ -73,7 +73,7 @@ def broadcast_encoding(vector, height, width):
 # sampling utilities
 
 def eta_g(canvas,
-          kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+          kernel_size=PARAMS.ETA_EXTERNAL_KERNEL_SIZE,
           channels=PARAMS.IMG_CHANNELS,
           scope="eta_g"):
   return tf.layers.conv2d(

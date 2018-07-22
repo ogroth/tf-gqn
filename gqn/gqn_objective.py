@@ -38,12 +38,14 @@ def gqn_draw_elbo(
       and prior distributions at every image generation step.
   """
   with tf.variable_scope(scope):
+    endpoints = {}
     # negative log-likelihood of target frame given target distribution
     target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
     target_llh = tf.identity(
         input=-tf.reduce_sum(
             tf.reduce_mean(target_normal.log_prob(target_frame), axis=0)),
         name='target_llh')
+    endpoints['target_llh'] = target_llh
     # KL divergence regularizer over all generation steps
     kl_div_list = []
     for mu_q_l, sigma_q_l, mu_pi_l, sigma_pi_l in zip(mu_q, sigma_q, mu_pi, sigma_pi):
@@ -59,11 +61,12 @@ def gqn_draw_elbo(
         input=tf.reduce_sum(
             tf.reduce_mean(tf.add_n(kl_div_list), axis=0)),
         name='kl_regularizer')
+    endpoints['kl_regularizer'] = kl_regularizer
     # final ELBO term
     # target_llh = tf.Print(input_=target_llh, data=[target_llh])  # debug
     # kl_regularizer = tf.Print(input_=kl_regularizer, data=[kl_regularizer])  # debug
     elbo = target_llh + kl_regularizer
-    return elbo
+    return elbo, endpoints
 
 
 def gqn_vae_elbo(
@@ -96,10 +99,9 @@ def gqn_vae_elbo(
         name='target_llh')
 
     # KL divergence regularizer
-    # TODO(ogroth): use closed-form version with unit-gaussian
     posterior_normal = tf.distributions.Normal(loc=mu_q, scale=sigma_q)
     prior_normal = tf.distributions.Normal(loc=tf.zeros_like(mu_q),
-                                          scale=tf.ones_line(sigma_q))
+                                          scale=tf.ones_like(sigma_q))
     kl_div = tf.distributions.kl_divergence(posterior_normal, prior_normal)
     kl_regularizer = tf.identity(
         input=tf.reduce_sum(

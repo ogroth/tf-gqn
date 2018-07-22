@@ -108,6 +108,7 @@ def gqn_draw(
   _ENC_TYPE = model_params.ENC_TYPE
   _DIM_H_ENC = model_params.ENC_HEIGHT
   _DIM_W_ENC = model_params.ENC_WIDTH
+  _DIM_C_ENC = model_params.ENC_CHANNELS
   _SEQ_LENGTH = model_params.SEQ_LENGTH
 
   with tf.variable_scope(scope):
@@ -122,7 +123,7 @@ def gqn_draw(
       enc_r_broadcast = broadcast_encoding(
           vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
     else:
-      enc_r_broadcast = enc_r
+      enc_r_broadcast = tf.reshape(enc_r, [-1, _DIM_H_ENC, _DIM_W_ENC, _DIM_C_ENC])
 
     # define generator graph (with inference component if in training mode)
     if is_training:

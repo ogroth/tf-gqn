@@ -24,6 +24,11 @@ from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
 from .gqn_vae import vae_tower_decoder
 
 
+_ENC_FUNCTIONS = {
+  'pool' : pool_encoder,
+  'tower' : tower_encoder,
+}
+
 def _pack_context(context_poses, context_frames, model_params):
   # shorthand notations for model parameters
   _DIM_POSE = model_params.POSE_CHANNELS
@@ -100,6 +105,7 @@ def gqn_draw(
       nodes in the computational graph.
   """
   # shorthand notations for model parameters
+  _ENC_TYPE = model_params.ENC_TYPE
   _DIM_H_ENC = model_params.ENC_HEIGHT
   _DIM_W_ENC = model_params.ENC_WIDTH
   _SEQ_LENGTH = model_params.SEQ_LENGTH
@@ -108,13 +114,15 @@ def gqn_draw(
     endpoints = {}
 
     enc_r, endpoints_enc = _encode_context(
-        pool_encoder, context_poses, context_frames, model_params)
+        _ENC_FUNCTIONS[_ENC_TYPE], context_poses, context_frames, model_params)
     endpoints.update(endpoints_enc)
 
     # broadcast scene representation to 1/4 of targeted frame size
-    # TODO(ogroth): only do this when using pool_encoder
-    enc_r_broadcast = broadcast_encoding(
-        vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+    if _ENC_TYPE == 'pool':
+      enc_r_broadcast = broadcast_encoding(
+          vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+    else:
+      enc_r_broadcast = enc_r
 
     # define generator graph (with inference component if in training mode)
     if is_training:

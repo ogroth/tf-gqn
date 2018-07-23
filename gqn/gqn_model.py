@@ -209,7 +209,7 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   # customize parameters
   custom_params_dict = _DEFAULTS
   custom_params_dict['CONTEXT_SIZE'] = 1
-  custom_params_dict['SEQ_LENGTH'] = 1
+  # custom_params_dict['SEQ_LENGTH'] = 1
   custom_params = _GQNParams(**custom_params_dict)
 
   # shorthand notations for parameters
@@ -237,6 +237,11 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   sigma_target = _linear_noise_annealing(custom_params)
   target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
   target_sample = tf.identity(target_normal.sample(), name='target_sample')
+  l2_reconstruction = tf.identity(
+      tf.metrics.mean_squared_error(
+          labels=labels,
+          predictions=mu_target),
+      name='l2_reconstruction')
   # write out image summaries in debug mode
   if params['debug']:
     for i in range(_CONTEXT_SIZE):
@@ -254,6 +259,10 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
         'target_means',
         mu_target,
         max_outputs=1
+    )
+    tf.summary.scalar(
+        'l2_reconstruction',
+        l2_reconstruction[1]
     )
     generator_sequence = debug_canvas_image_mean(
         [ep_gqn['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]

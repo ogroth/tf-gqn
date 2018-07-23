@@ -397,10 +397,6 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     # unroll the LSTM cells
     for step in range(sequence_size):
 
-      # TODO(stefan,ogroth): What is the correct order for sampling, inference
-      # and generator update?
-      # 1) sample; 2) infer; 3) generate
-
       # generator and inference cell need to have the same variable scope
       # for variable sharing!
 
@@ -410,7 +406,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
           gen_state.lstm.h)
       # update inference cell
       with tf.name_scope("Inference"):
-        (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM")
+        (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM_inf")
       # estimate statistics and sample state from posterior
       mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
                                                     scope="Sample_eta_q")
@@ -418,7 +414,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       gen_input = _GeneratorCellInput(representations, query_poses, z_q)
       # update generator cell
       with tf.name_scope("Generator"):
-        (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM")
+        (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM_gen")
       # estimate statistics of prior for KL divergence
       mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
                                                        scope="Sample_eta_pi")

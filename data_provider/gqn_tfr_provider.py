@@ -65,8 +65,8 @@ _DATASETS = dict(
 
     rooms_ring_camera_debug=DatasetInfo(
         basepath='rooms_ring_camera_debug',
-        train_size=18,
-        test_size=2,
+        train_size=1,  # 18
+        test_size=1,  # 2
         frame_size=64,
         sequence_size=10),
 

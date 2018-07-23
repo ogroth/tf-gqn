@@ -99,7 +99,8 @@ def main(unparsed_argv):
 
   # create logging hooks
   tensors_to_log = {
-      'target_sample' : 'target_sample'
+      # 'target_sample' : 'target_sample',
+      'l2_reconstruction' : 'l2_reconstruction'
   }
   logging_hook = tf.train.LoggingTensorHook(
       tensors=tensors_to_log,

@@ -98,7 +98,7 @@ def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
 
 
 @optional_scope
-def compute_eta_and_sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
+def compute_eta_and_sample_z(h, kernel_size=PARAMS.ETA_INTERNAL_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
@@ -115,14 +115,14 @@ def compute_eta_and_sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PA
 
 
 @optional_scope
-def sample_z(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
+def sample_z(h, kernel_size=PARAMS.ETA_INTERNAL_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
   Statistics of the normal distribution are obtained from h via a convolutional function eta.
   The sampling is done via the 're-parameterization trick' (factoring out noise into epsilon).
   """
-  _, _, z = compute_eta_and_sample_z(h, kernel_size)
+  _, _, z = compute_eta_and_sample_z(h, kernel_size, channels)
   return z
 
 

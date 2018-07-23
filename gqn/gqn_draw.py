@@ -353,8 +353,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1].canvas
 
-  mu_target = eta_g(
-    target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints
@@ -436,8 +435,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1][1].canvas
 
-  mu_target = eta_g(
-      target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints

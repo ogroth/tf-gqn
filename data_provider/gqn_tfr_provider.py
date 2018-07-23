@@ -63,6 +63,13 @@ _DATASETS = dict(
         frame_size=64,
         sequence_size=10),
 
+    rooms_ring_camera_debug=DatasetInfo(
+        basepath='rooms_ring_camera_debug',
+        train_size=18,
+        test_size=2,
+        frame_size=64,
+        sequence_size=10),
+
     rooms_free_camera_no_object_rotations=DatasetInfo(
         basepath='rooms_free_camera_no_object_rotations',
         train_size=2160,
@@ -299,7 +306,7 @@ class GQNTFRecordDataset(tf.data.Dataset):
       buffer_size: (optional) integer, capacity of the buffer into which
           records are read, defualts to 256.
       parse_batch_size: (optional) integer, number of records to parse at the
-          same time, defualts to 32.
+          same time, defaults to 32.
 
     Raises:
       ValueError: if the required version does not exist; if the required mode

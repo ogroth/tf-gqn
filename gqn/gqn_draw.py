@@ -98,10 +98,8 @@ class GQNLSTMCell(tf.contrib.rnn.RNNCell):
     inputs[self._hidden_state_name] = hidden_state
 
     with tf.name_scope("InputConv"):
-        new_hidden = self._conv(inputs)
-        gates = tf.split(value=new_hidden,
-                         num_or_size_splits=4,
-                         axis=-1)
+      new_hidden = self._conv(inputs)
+      gates = tf.split(value=new_hidden, num_or_size_splits=4, axis=-1)
 
     input_gate, new_input, forget_gate, output_gate = gates
 
@@ -214,7 +212,7 @@ class GeneratorLSTMCell(tf.contrib.rnn.RNNCell):
     sub_state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
 
     sub_output, new_sub_state = self._gqn_cell(
-      inputs._asdict(), sub_state, scope=create_sub_scope(scope, "GQNCell"))
+        inputs._asdict(), sub_state, scope=create_sub_scope(scope, "GQNCell"))
 
     # upscale the output and add it to u (the side state)
     new_canvas = canvas + tf.layers.conv2d_transpose(
@@ -402,21 +400,30 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       # TODO(stefan,ogroth): What is the correct order for sampling, inference
       # and generator update?
       # 1) sample; 2) infer; 3) generate
-      inf_input = _InferenceCellInput(
-          representations, query_poses, target_frames, gen_state.canvas,
-          gen_state.lstm.h)
-      mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
-                                                    scope="Sample_eta_q")
-      mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
-                                                       scope="Sample_eta_pi")
-      gen_input = _GeneratorCellInput(representations, query_poses, z_q)
 
       # generator and inference cell need to have the same variable scope
       # for variable sharing!
+
+      # input into inference RNN
+      inf_input = _InferenceCellInput(
+          representations, query_poses, target_frames, gen_state.canvas,
+          gen_state.lstm.h)
+      # update inference cell
       with tf.name_scope("Inference"):
         (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM")
+      # estimate statistics and sample state from posterior
+      mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
+                                                    scope="Sample_eta_q")
+      # input into generator RNN
+      gen_input = _GeneratorCellInput(representations, query_poses, z_q)
+      # update generator cell
       with tf.name_scope("Generator"):
         (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM")
+      # estimate statistics of prior for KL divergence
+      mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
+                                                       scope="Sample_eta_pi")
+      # aggregate outputs
+      outputs.append((inf_output, gen_output))
 
       # register enpoints
       ep_mu_q = "mu_q_%d" % (step, )
@@ -429,9 +436,6 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
       endpoints[ep_sigma_q] = sigma_q
       endpoints[ep_sigma_pi] = sigma_pi
       endpoints[ep_canvas] = gen_output.canvas
-
-      # aggregate outputs
-      outputs.append((inf_output, gen_output))
 
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1][1].canvas

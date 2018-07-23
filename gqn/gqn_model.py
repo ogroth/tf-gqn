@@ -96,7 +96,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
   target_sample = tf.identity(target_normal.sample(), name='target_sample')
   l2_reconstruction = tf.identity(
       tf.metrics.mean_squared_error(
-          labels=labels,
+          labels=target_frame,
           predictions=mu_target),
       name='l2_reconstruction')
   # write out image summaries in debug mode
@@ -172,7 +172,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
   # evaluation metrics to monitor
   if mode == tf.estimator.ModeKeys.EVAL:
     eval_metric_ops = {
-        'mean_abs_pixel_error' : tf.metrics.mean_absolute_error(
+        'l2_reconstruction' : tf.metrics.mean_squared_error(
             labels=target_frame,
             predictions=mu_target)
     }
@@ -218,7 +218,6 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   # customize parameters
   custom_params_dict = _DEFAULTS
   custom_params_dict['CONTEXT_SIZE'] = 1
-  # custom_params_dict['SEQ_LENGTH'] = 1
   custom_params = _GQNParams(**custom_params_dict)
 
   # shorthand notations for parameters
@@ -248,7 +247,7 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   target_sample = tf.identity(target_normal.sample(), name='target_sample')
   l2_reconstruction = tf.identity(
       tf.metrics.mean_squared_error(
-          labels=labels,
+          labels=target_frame,
           predictions=mu_target),
       name='l2_reconstruction')
   # write out image summaries in debug mode
@@ -324,7 +323,7 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   # evaluation metrics to monitor
   if mode == tf.estimator.ModeKeys.EVAL:
     eval_metric_ops = {
-        'mean_abs_pixel_error' : tf.metrics.mean_absolute_error(
+        'l2_reconstruction' : tf.metrics.mean_squared_error(
             labels=target_frame,
             predictions=mu_target)
     }

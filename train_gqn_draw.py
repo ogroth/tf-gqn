@@ -21,7 +21,7 @@ ARGPARSER = argparse.ArgumentParser(
     description='Train a GQN as a tf.estimator.Estimator.')
 # directory parameters
 ARGPARSER.add_argument(
-    '--data_dir', type=str, default='/Volumes/Maxtor/datasets/gqn-dataset',
+    '--data_dir', type=str, default='/tmp/data/gqn-dataset',
     help='The path to the gqn-dataset directory.')
 ARGPARSER.add_argument(
     '--dataset', type=str, default='rooms_ring_camera',

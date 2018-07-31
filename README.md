@@ -1,5 +1,5 @@
 # tf-gqn
-![Flying through a scene generated from a single context image](https://storage.googleapis.com/deepmind-live-cms/documents/gif_1.gif)
+![Flying through a scene generated from a single context image](gqn_demo.gif)
 
 This repository contains a Tensorflow implementation of the *Generative Query Network (GQN)* described in 'Neural Scene Representation and Rendering' by Eslami et al. (2018).
 

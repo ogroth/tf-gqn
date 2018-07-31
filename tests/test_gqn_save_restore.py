@@ -1,6 +1,12 @@
 """
-Quick test script to check ELBO optimization on GQN.
+Quick test script to check correct save and restore functionality of GQN model.
 """
+
+import os
+import sys
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+TF_GQN_HOME = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
+sys.path.append(TF_GQN_HOME)
 
 import tensorflow as tf
 import numpy as np
@@ -112,3 +118,5 @@ with tf.Session() as sess:
       context_frames: rnd_context_frames,
     })
 print("Restored variables and ran a forward pass... Yay!")
+
+print("TEST PASSED!")

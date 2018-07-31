@@ -63,6 +63,8 @@ _DATASETS = dict(
         frame_size=64,
         sequence_size=10),
 
+    # super-small subset of rooms_ring for debugging purposes
+    # TODO(ogroth): provide dataset
     rooms_ring_camera_debug=DatasetInfo(
         basepath='rooms_ring_camera_debug',
         train_size=1,  # 18
@@ -348,25 +350,12 @@ class GQNTFRecordDataset(tf.data.Dataset):
     self._dataset = tf.data.TFRecordDataset(file_names,
                                             num_parallel_reads=num_threads)
 
-    # if mode == tf.estimator.ModeKeys.TRAIN:
-    #   self._dataset = self._dataset.shuffle(buffer_size=buffer_size, seed=seed)
-
     self._dataset = self._dataset.prefetch(buffer_size)
     self._dataset = self._dataset.batch(parse_batch_size)
     self._dataset = self._dataset.map(self._parse_record,
                                       num_parallel_calls=num_threads)
     self._dataset = self._dataset.apply(tf.contrib.data.unbatch())
 
-    # it = dataset.make_one_shot_iterator()
-    #
-    # frames, cameras = it.get_next()
-    # context_frames = frames[:, :-1]
-    # context_cameras = cameras[:, :-1]
-    # target = frames[:, -1]
-    # query_camera = cameras[:, -1]
-    # context = Context(cameras=context_cameras, frames=context_frames)
-    # query = Query(context=context, query_camera=query_camera)
-    # return TaskData(query=query, target=target)
 
   def _parse_record(self, raw_data):
     """Parses the data into tensors."""
@@ -502,5 +491,4 @@ def gqn_input_fn(
   query_camera = cameras[:, -1]
   context = Context(cameras=context_cameras, frames=context_frames)
   query = Query(context=context, query_camera=query_camera)
-  # return TaskData(query=query, target=target)
-  return query, target  # default return pattern of features, labels
+  return query, target  # default return pattern of input_fn: features, labels

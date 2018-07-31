@@ -39,7 +39,7 @@ The code requires at least **Tensorflow 1.8.0**. It has been tested on the follo
 - macOS High Sierra 10.13.6 with Python 3.5.2.
 
 	
-The major software requiremets can be installed on an Ubuntu machine via:
+The major software requirements can be installed on an Ubuntu machine via:
 
 ```bash
 $ sudo apt-get install python3-pip python3-dev virtualenv
@@ -85,6 +85,13 @@ python3 train_gqn_draw.py \
 For more verbose information (and summaries), you can pass the  `--debug` option to the script as well.
 
 ## Notes
+A few random notes about this implementation:
+
+- The model has so far only been trained successfully on the ```rooms_ring_camera``` dataset of the GQN data repository.
+- We were not able to train the model with the learning rate scheme reported in the original paper (from 5\*10e-4 to 5\*10e-5 over 200K steps). This always resulted in a local minimum only generating light blue sky and a grey blob of background. We achieved good results by lowering all learning rates by one order of magnitude.
+- Currently, our implementation does not share the convolutional cores between the inference and generation LSTMs. With shared cores we observed the KL divergence between posterior and prior collapsing to zero frequently and obtained generally inferior results (which is in line with the results reported in the paper).
+- In our tests, we found eight generation steps to be a good trade-off between training stability, training speed and visual quality.
+- We have trained models on Titan Xp and GTX 1080Ti GPUs usually obtaining visually reasonable results after about one day of training.
 
 ## Authors
 

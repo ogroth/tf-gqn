@@ -36,6 +36,8 @@ def gqn_draw_elbo(
     elbo: Scalar. Expected value over the negative log-likelihood of the target frame given \
       the target distribution regularized by the cumulative KL divergence between posterior \
       and prior distributions at every image generation step.
+    endpoints: A dictionary of relevant computational endpoints for quick access to the graph \
+      nodes.
   """
   with tf.variable_scope(scope):
     endpoints = {}

@@ -1,12 +1,19 @@
 """
-Quick test script to check graph definition of GQN image generation.
+Quick test script to shape-check graph definition of GQN image generation with
+random toy data.
 """
+
+import os
+import sys
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+TF_GQN_HOME = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
+sys.path.append(TF_GQN_HOME)
 
 import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_rnn import generator_rnn
+from gqn.gqn_draw import generator_rnn
 
 # constants
 _BATCH_SIZE = 1
@@ -14,7 +21,7 @@ _DIM_POSE = PARAMS.POSE_CHANNELS
 _DIM_R_H = PARAMS.ENC_HEIGHT
 _DIM_R_W = PARAMS.ENC_WIDTH
 _DIM_R_C = PARAMS.ENC_CHANNELS
-_SEQ_LENGTH = PARAMS.SEQ_LENGTH
+_SEQ_LENGTH = 2
 
 # input placeholders
 query_pose = tf.placeholder(
@@ -40,3 +47,5 @@ with tf.Session() as sess:
   print(mu.shape)
   for ep, t in ep_generation.items():
     print(ep, t)
+
+print("TEST PASSED!")

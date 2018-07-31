@@ -1,12 +1,19 @@
 """
-Quick test script to check graph definition of GQN latent space inference.
+Quick test script to shape-check graph definition of GQN latent space
+inference with random toy data.
 """
+
+import os
+import sys
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+TF_GQN_HOME = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
+sys.path.append(TF_GQN_HOME)
 
 import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_rnn import inference_rnn
+from gqn.gqn_draw import inference_rnn
 
 # constants
 _BATCH_SIZE = 1
@@ -48,3 +55,5 @@ with tf.Session() as sess:
   print(mu.shape)
   for ep, t in ep_inference.items():
     print(ep, t)
+
+print("TEST PASSED!")

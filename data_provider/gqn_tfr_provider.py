@@ -63,6 +63,15 @@ _DATASETS = dict(
         frame_size=64,
         sequence_size=10),
 
+    # super-small subset of rooms_ring for debugging purposes
+    # TODO(ogroth): provide dataset
+    rooms_ring_camera_debug=DatasetInfo(
+        basepath='rooms_ring_camera_debug',
+        train_size=1,  # 18
+        test_size=1,  # 2
+        frame_size=64,
+        sequence_size=10),
+
     rooms_free_camera_no_object_rotations=DatasetInfo(
         basepath='rooms_free_camera_no_object_rotations',
         train_size=2160,
@@ -299,7 +308,7 @@ class GQNTFRecordDataset(tf.data.Dataset):
       buffer_size: (optional) integer, capacity of the buffer into which
           records are read, defualts to 256.
       parse_batch_size: (optional) integer, number of records to parse at the
-          same time, defualts to 32.
+          same time, defaults to 32.
 
     Raises:
       ValueError: if the required version does not exist; if the required mode
@@ -341,25 +350,12 @@ class GQNTFRecordDataset(tf.data.Dataset):
     self._dataset = tf.data.TFRecordDataset(file_names,
                                             num_parallel_reads=num_threads)
 
-    # if mode == tf.estimator.ModeKeys.TRAIN:
-    #   self._dataset = self._dataset.shuffle(buffer_size=buffer_size, seed=seed)
-
     self._dataset = self._dataset.prefetch(buffer_size)
     self._dataset = self._dataset.batch(parse_batch_size)
     self._dataset = self._dataset.map(self._parse_record,
                                       num_parallel_calls=num_threads)
     self._dataset = self._dataset.apply(tf.contrib.data.unbatch())
 
-    # it = dataset.make_one_shot_iterator()
-    #
-    # frames, cameras = it.get_next()
-    # context_frames = frames[:, :-1]
-    # context_cameras = cameras[:, :-1]
-    # target = frames[:, -1]
-    # query_camera = cameras[:, -1]
-    # context = Context(cameras=context_cameras, frames=context_frames)
-    # query = Query(context=context, query_camera=query_camera)
-    # return TaskData(query=query, target=target)
 
   def _parse_record(self, raw_data):
     """Parses the data into tensors."""
@@ -429,18 +425,19 @@ class GQNTFRecordDataset(tf.data.Dataset):
     return self._dataset.output_types
 
 
-def input_fn(dataset,
-             context_size,
-             root,
-             mode,
-             batch_size=1,
-             num_epochs=1,
-             # Optionally reshape frames
-             custom_frame_size=None,
-             # Queue params
-             num_threads=4,
-             buffer_size=256,
-             seed=None):
+def gqn_input_fn(
+    dataset,
+    context_size,
+    root,
+    mode,
+    batch_size=1,
+    num_epochs=1,
+    # Optionally reshape frames
+    custom_frame_size=None,
+    # Queue params
+    num_threads=4,
+    buffer_size=256,
+    seed=None):
   """
   Creates a tf.data.Dataset based op that returns data.
     Args:
@@ -475,13 +472,15 @@ def input_fn(dataset,
     str_mode = 'test'
 
   dataset = GQNTFRecordDataset(
-    dataset, context_size, root, str_mode, custom_frame_size, num_threads,
-    buffer_size)
+      dataset, context_size, root, str_mode, custom_frame_size, num_threads,
+      buffer_size)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
-    dataset = dataset.shuffle(buffer_size=buffer_size, seed=seed)
+    dataset = dataset.shuffle(buffer_size=(buffer_size * batch_size), seed=seed)
 
-  dataset = dataset.batch(batch_size).repeat(num_epochs).prefetch(buffer_size)
+  dataset = dataset.repeat(num_epochs)
+  dataset = dataset.batch(batch_size)
+  dataset = dataset.prefetch(buffer_size * batch_size)
 
   it = dataset.make_one_shot_iterator()
 
@@ -492,4 +491,4 @@ def input_fn(dataset,
   query_camera = cameras[:, -1]
   context = Context(cameras=context_cameras, frames=context_frames)
   query = Query(context=context, query_camera=query_camera)
-  return TaskData(query=query, target=target)
+  return query, target  # default return pattern of input_fn: features, labels

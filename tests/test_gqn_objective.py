@@ -1,13 +1,20 @@
 """
-Quick test script to check graph definition of full GQN model.
+Quick test script to shape-check graph definition of full GQN model with ELBO
+objective with random toy data.
 """
+
+import os
+import sys
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+TF_GQN_HOME = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
+sys.path.append(TF_GQN_HOME)
 
 import tensorflow as tf
 import numpy as np
 
 from gqn.gqn_params import PARAMS
-from gqn.gqn_graph import gqn
-from gqn.gqn_objective import gqn_elbo
+from gqn.gqn_graph import gqn_draw
+from gqn.gqn_objective import gqn_draw_elbo
 
 # constants
 _BATCH_SIZE = 1
@@ -32,7 +39,7 @@ context_frames = tf.placeholder(
     dtype=tf.float32)
 
 # graph definition
-net, ep_gqn = gqn(
+net, ep_gqn = gqn_draw(
     query_pose=query_pose,
     target_frame=target_frame,
     context_poses=context_poses,
@@ -53,7 +60,7 @@ for i in range(_SEQ_LENGTH):
   sigma_q.append(ep_gqn["sigma_q_%d" % i])
   mu_pi.append(ep_gqn["mu_pi_%d" % i])
   sigma_pi.append(ep_gqn["sigma_pi_%d" % i])
-elbo = gqn_elbo(
+elbo, ep_elbo = gqn_draw_elbo(
     mu_target, sigma_target,
     mu_q, sigma_q,
     mu_pi, sigma_pi,
@@ -74,3 +81,5 @@ with tf.Session() as sess:
   print(loss.shape)
   for ep, t in ep_gqn.items():
     print(ep, t)
+
+print("TEST PASSED!")

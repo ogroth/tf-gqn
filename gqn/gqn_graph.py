@@ -18,13 +18,67 @@ from __future__ import print_function
 import tensorflow as tf
 
 from .gqn_params import _GQNParams
-from .gqn_encoder import pool_encoder
-from .gqn_rnn import inference_rnn, generator_rnn
-from .gqn_utils import broadcast_encoding
+from .gqn_encoder import tower_encoder, pool_encoder
+from .gqn_draw import inference_rnn, generator_rnn
+from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
+from .gqn_vae import vae_tower_decoder
 
 
+_ENC_FUNCTIONS = {
+  'pool' : pool_encoder,
+  'tower' : tower_encoder,
+}
 
-def gqn(
+def _pack_context(context_poses, context_frames, model_params):
+  # shorthand notations for model parameters
+  _DIM_POSE = model_params.POSE_CHANNELS
+  _DIM_H_IMG = model_params.IMG_HEIGHT
+  _DIM_W_IMG = model_params.IMG_WIDTH
+  _DIM_C_IMG = model_params.IMG_CHANNELS
+
+  # pack scene context into pseudo-batch for encoder
+  context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
+  context_frames_packed = tf.reshape(
+      context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
+
+  return context_poses_packed, context_frames_packed
+
+
+def _reduce_packed_representation(enc_r_packed, model_params):
+  # shorthand notations for model parameters
+  _CONTEXT_SIZE = model_params.CONTEXT_SIZE
+  _DIM_C_ENC = model_params.ENC_CHANNELS
+
+  height, width = tf.shape(enc_r_packed)[1], tf.shape(enc_r_packed)[2]
+
+  enc_r_unpacked = tf.reshape(
+      enc_r_packed, shape=[-1, _CONTEXT_SIZE, height, width, _DIM_C_ENC])
+
+  # add scene representations per data tuple
+  enc_r = tf.reduce_sum(enc_r_unpacked, axis=1)
+
+  return enc_r
+
+
+def _encode_context(encoder_fn, context_poses, context_frames, model_params):
+  endpoints = {}
+
+  context_poses_packed, context_frames_packed = _pack_context(
+      context_poses, context_frames, model_params)
+
+  # define scene encoding graph psi
+  enc_r_packed, endpoints_psi = encoder_fn(context_frames_packed,
+                                           context_poses_packed)
+  endpoints.update(endpoints_psi)
+
+  # unpack scene encoding and reduce to single vector
+  enc_r = _reduce_packed_representation(enc_r_packed, model_params)
+  endpoints["enc_r"] = enc_r
+
+  return enc_r, endpoints
+
+
+def gqn_draw(
     query_pose: tf.Tensor, target_frame: tf.Tensor,
     context_poses: tf.Tensor, context_frames: tf.Tensor,
     model_params: _GQNParams, is_training: bool = True,
@@ -34,7 +88,8 @@ def gqn(
 
   Arguments:
     query_pose: Pose vector of the query camera.
-    target_frame: Ground truth frame of the query camera.
+    target_frame: Ground truth frame of the query camera. Used in training mode
+        by the inference LSTM.
     context_poses: Camera poses of the context views.
     context_frames: Frames of the context views.
     model_params: Named tuple containing the parameters of the GQN model as \
@@ -50,12 +105,7 @@ def gqn(
       nodes in the computational graph.
   """
   # shorthand notations for model parameters
-  _BATCH_SIZE = model_params.BATCH_SIZE
-  _CONTEXT_SIZE = model_params.CONTEXT_SIZE
-  _DIM_POSE = model_params.POSE_CHANNELS
-  _DIM_H_IMG = model_params.IMG_HEIGHT
-  _DIM_W_IMG = model_params.IMG_WIDTH
-  _DIM_C_IMG = model_params.IMG_CHANNELS
+  _ENC_TYPE = model_params.ENC_TYPE
   _DIM_H_ENC = model_params.ENC_HEIGHT
   _DIM_W_ENC = model_params.ENC_WIDTH
   _DIM_C_ENC = model_params.ENC_CHANNELS
@@ -64,24 +114,16 @@ def gqn(
   with tf.variable_scope(scope):
     endpoints = {}
 
-    # pack scene context into pseudo-batch for encoder
-    context_poses_packed = tf.reshape(context_poses, shape=[-1, _DIM_POSE])
-    context_frames_packed = tf.reshape(
-        context_frames, shape=[-1, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG])
-
-    # define scene encoding graph psi
-    enc_r_packed, endpoints_psi = pool_encoder(context_frames_packed, context_poses_packed)
-    endpoints.update(endpoints_psi)
-
-    # unpack scene encoding and reduce to single vector
-    enc_r_packed = tf.reshape(
-        enc_r_packed,
-        shape=[_BATCH_SIZE, _CONTEXT_SIZE, 1, 1, _DIM_C_ENC])  # 1, 1 for pool encoder only!
-    enc_r = tf.reduce_sum(enc_r_packed, axis=1) # add scene representations per data tuple
-    endpoints["enc_r"] = enc_r
+    enc_r, endpoints_enc = _encode_context(
+        _ENC_FUNCTIONS[_ENC_TYPE], context_poses, context_frames, model_params)
+    endpoints.update(endpoints_enc)
 
     # broadcast scene representation to 1/4 of targeted frame size
-    enc_r_broadcast = broadcast_encoding(vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+    if _ENC_TYPE == 'pool':
+      enc_r_broadcast = broadcast_encoding(
+          vector=enc_r, height=_DIM_H_ENC, width=_DIM_W_ENC)
+    else:
+      enc_r_broadcast = tf.reshape(enc_r, [-1, _DIM_H_ENC, _DIM_W_ENC, _DIM_C_ENC])
 
     # define generator graph (with inference component if in training mode)
     if is_training:
@@ -99,5 +141,44 @@ def gqn(
       )
 
     endpoints.update(endpoints_rnn)
-    net = mu_target # final mu tensor parameterizing target frame sampling
+    net = mu_target  # final mu tensor parameterizing target frame sampling
+    return net, endpoints
+
+
+def gqn_vae(
+    query_pose: tf.Tensor,
+    context_poses: tf.Tensor, context_frames: tf.Tensor,
+    model_params: _GQNParams, scope: str = "GQN-VAE"):
+  """
+  Defines the computational graph of the GQN-VAE baseline model.
+
+  Arguments:
+    query_pose: Pose vector of the query camera.
+    context_poses: Camera poses of the context views.
+    context_frames: Frames of the context views.
+    model_params: Named tuple containing the parameters of the GQN model as \
+      defined in gqn_params.py
+    scope: Scope name of the graph.
+
+  Returns:
+    net: The last tensor of the network.
+    endpoints: A dictionary providing quick access to the most important model
+      nodes in the computational graph.
+  """
+  with tf.variable_scope(scope):
+    endpoints = {}
+
+    enc_r, endpoints_enc = _encode_context(
+        tower_encoder, context_poses, context_frames, model_params)
+    endpoints.update(endpoints_enc)
+
+    mu_z, sigma_z, z = compute_eta_and_sample_z(
+        enc_r, channels=model_params.Z_CHANNELS, scope="Sample_eta")
+    endpoints['mu_q'] = mu_z
+    endpoints['sigma_q'] = sigma_z
+
+    mu_target, decoder_ep = vae_tower_decoder(z, query_pose)
+    endpoints.update(decoder_ep)
+
+    net = mu_target  # final mu tensor parameterizing target frame sampling
     return net, endpoints

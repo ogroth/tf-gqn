@@ -84,6 +84,10 @@ python3 train_gqn_draw.py \
 
 For more verbose information (and summaries), you can pass the  `--debug` option to the script as well.
 
+## Model Snapshots
+We provide the a few model snapshots we obtained during our debugging runs as a reference. We trained the GQN on a subset of ```rooms_ring_camera``` for about 220K steps with the ```Pool``` architecture for scene encoding and the ```DRAW``` architecture for rendering with a variable sequence length (2 through 12 generation steps).
+The [snapshots](http://shapestacks.robots.ox.ac.uk/static/download/tf-gqn/models/gqn_rooms_ring_debug.tar.gz) can be downloaded as ```tar.gz``` archive.
+
 ## Notes
 A few random notes about this implementation:
 

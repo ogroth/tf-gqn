@@ -133,7 +133,8 @@ def gqn_draw_model_fn(features, labels, mode, params):
   # predictions to make when deployed during test time
   if mode == tf.estimator.ModeKeys.PREDICT:
     predictions = {
-        'target_sample' : target_sample
+        'predicted_mean' : mu_target,
+        'predicted_variance' : sigma_target,
     }
 
   # ELBO setup

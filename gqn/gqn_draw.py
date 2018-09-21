@@ -445,5 +445,120 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
 
   mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
-
+  
   return mu_target, endpoints
+
+# added by Jaesik for getting generation samples
+def generation_inference_rnn(representations, query_poses, target_frames, sequence_size=12,
+                  scope="GQN_RNN"):
+  """
+  Creates the computational graph for the DRAW module in inference mode.
+  This is the training time setup where the posterior can be inferred from the
+  target image.
+  """
+
+  dim_r = representations.get_shape().as_list()
+  batch = tf.shape(representations)[0]
+  height, width = dim_r[1], dim_r[2]
+
+  generator_cell = GeneratorLSTMCell(
+      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="GeneratorCell")
+  inference_cell = InferenceLSTMCell(
+      input_shape=[height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
+      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
+      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      name="InferenceCell")
+
+  outputs = []
+  endpoints = {}
+  with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
+    if not tf.executing_eagerly():
+      if varscope.caching_device is None:
+        varscope.set_caching_device(lambda op: op.device)
+
+    query_poses = broadcast_pose(query_poses, height, width)
+
+    inf_state = inference_cell.zero_state(batch, tf.float32)
+    gen_state = generator_cell.zero_state(batch, tf.float32)
+
+    # unroll the LSTM cells
+    for step in range(sequence_size):
+
+      # TODO(ogroth): currently no variable sharing, remove?
+      # generator and inference cell need to have the same variable scope
+      # for variable sharing!
+
+      # input into inference RNN
+      inf_input = _InferenceCellInput(
+          representations, query_poses, target_frames, gen_state.canvas,
+          gen_state.lstm.h)
+      # update inference cell
+      with tf.name_scope("Inference"):
+        (inf_output, inf_state) = inference_cell(inf_input, inf_state, "LSTM_inf")
+      # estimate statistics and sample state from posterior
+      mu_q, sigma_q, z_q = compute_eta_and_sample_z(inf_state.lstm.h,
+                                                    scope="Sample_eta_q")
+      # input into generator RNN
+      gen_input = _GeneratorCellInput(representations, query_poses, z_q)
+      # update generator cell
+      with tf.name_scope("Generator"):
+        (gen_output, gen_state) = generator_cell(gen_input, gen_state, "LSTM_gen")
+      # estimate statistics of prior for KL divergence
+      mu_pi, sigma_pi, z_pi = compute_eta_and_sample_z(gen_state.lstm.h,
+                                                       scope="Sample_eta_pi")
+      # aggregate outputs
+      outputs.append((inf_output, gen_output))
+
+      # register enpoints
+      ep_mu_q = "mu_q_%d" % (step, )
+      ep_mu_pi = "mu_pi_%d" % (step, )
+      ep_sigma_q = "sigma_q_%d" % (step, )
+      ep_sigma_pi = "sigma_pi_%d" % (step, )
+      ep_canvas = "canvas_%d" % (step, )
+      endpoints[ep_mu_q] = mu_q
+      endpoints[ep_mu_pi] = mu_pi
+      endpoints[ep_sigma_q] = sigma_q
+      endpoints[ep_sigma_pi] = sigma_pi
+      endpoints[ep_canvas] = gen_output.canvas
+
+    # compute final mu tensor parameterizing sampling of target frame
+    target_canvas = outputs[-1][1].canvas
+
+  mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope='eta_g')
+  endpoints['mu_target'] = mu_target
+
+  outputs_gen = []
+  endpoints_gen = {}
+  with tf.variable_scope(scope, reuse=tf.AUTO_REUSE) as varscope:
+    if not tf.executing_eagerly():
+      if varscope.caching_device is None:
+        varscope.set_caching_device(lambda op: op.device)
+
+    state = generator_cell.zero_state(batch, tf.float32)
+
+    # unroll generator LSTM
+    for step in range(sequence_size):
+      z = sample_z(state.lstm.h, scope="Sample_eta_pi")
+      inputs = _GeneratorCellInput(representations, query_poses, z)
+      with tf.name_scope("Generator"):
+        (output, state) = generator_cell(inputs, state, "LSTM_gen")
+
+      # register enpoints
+      ep_canvas = "canvas_%d" % (step, )
+      endpoints_gen[ep_canvas] = output.canvas
+
+      # aggregate outputs
+      outputs_gen.append(output)
+
+    # compute final mu tensor parameterizing sampling of target frame
+    target_canvas = outputs_gen[-1].canvas
+
+  mu_target_gen = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope='eta_g')
+  endpoints_gen['mu_target'] = mu_target_gen
+  
+  return mu_target, endpoints, mu_target_gen, endpoints_gen
+

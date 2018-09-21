@@ -80,13 +80,12 @@ def gqn_draw_model_fn(features, labels, mode, params):
   context_frames = features.context.frames
 
   # graph setup
-  net, ep_gqn = gqn_draw(
+  net, ep_gqn, net_gen, ep_gqn_gen = gqn_draw(
       query_pose=query_pose,
       target_frame=target_frame,
       context_poses=context_poses,
       context_frames=context_frames,
-      model_params=params['gqn_params'],
-      is_training=(mode != tf.estimator.ModeKeys.PREDICT)
+      model_params=params['gqn_params']
   )
 
   # outputs: sampled images
@@ -99,35 +98,61 @@ def gqn_draw_model_fn(features, labels, mode, params):
           labels=target_frame,
           predictions=mu_target),
       name='l2_reconstruction')
+  l2_generation = tf.identity(
+      tf.metrics.mean_squared_error(
+          labels=target_frame,
+          predictions=net_gen),
+      name='l2_generation')
   # write out image summaries in debug mode
   if params['debug']:
+    if mode==tf.estimator.ModeKeys.TRAIN:
+        prefix='train_'
+    elif mode==tf.estimator.ModeKeys.EVAL:
+        prefix='eval_'
     for i in range(_CONTEXT_SIZE):
       tf.summary.image(
-          'context_frame_%d' % (i + 1),
+          prefix+'context_frame_%d' % (i + 1),
           context_frames[:, i],
           max_outputs=1
       )
     tf.summary.image(
-        'target_images',
+        prefix+'target_images',
         labels,
         max_outputs=1
-    )
-    tf.summary.image(
-        'target_means',
-        mu_target,
-        max_outputs=1
-    )
-    tf.summary.scalar(
-        'l2_reconstruction',
-        l2_reconstruction[1]
     )
     generator_sequence = debug_canvas_image_mean(
         [ep_gqn['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]
     )
     tf.summary.image(
-        'generator_sequence_mean',
+        prefix+'representation_sequence',
         generator_sequence,
         max_outputs=1
+    )
+    tf.summary.image(
+        prefix+'representation',
+        mu_target,
+        max_outputs=1
+    )
+    generator_sequence = debug_canvas_image_mean(
+        [ep_gqn_gen['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]
+    )
+    tf.summary.image(
+        prefix+'generation_sequence',
+        generator_sequence,
+        max_outputs=1
+    )
+    tf.summary.image(
+        prefix+'generation',
+        net_gen,
+        max_outputs=1
+    )
+    tf.summary.scalar(
+        prefix+'l2_reconstruction',
+        l2_reconstruction[1]
+    )
+    tf.summary.scalar(
+        prefix+'l2_generation',
+        l2_generation[1]
     )
 
   # predictions to make when deployed during test time
@@ -153,11 +178,11 @@ def gqn_draw_model_fn(features, labels, mode, params):
         target_frame)
     if params['debug']:
       tf.summary.scalar(
-          name='target_llh',
+          name=prefix+'target_llh',
           tensor=ep_elbo['target_llh']
       )
       tf.summary.scalar(
-          name='kl_regularizer',
+          name=prefix+'kl_regularizer',
           tensor=ep_elbo['kl_regularizer']
       )
 
@@ -173,9 +198,9 @@ def gqn_draw_model_fn(features, labels, mode, params):
   # evaluation metrics to monitor
   if mode == tf.estimator.ModeKeys.EVAL:
     eval_metric_ops = {
-        'l2_reconstruction' : tf.metrics.mean_squared_error(
+        'l2_generation' : tf.metrics.mean_squared_error(
             labels=target_frame,
-            predictions=mu_target)
+            predictions=net_gen)
     }
 
   # create SpecSheet

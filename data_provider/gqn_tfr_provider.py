@@ -328,9 +328,9 @@ class GQNTFRecordDataset(tf.data.Dataset):
 
     if context_size >= self._dataset_info.sequence_size:
       raise ValueError(
-        'Maximum support context size for dataset {} is {}, but '
-        'was {}.'.format(
-          dataset, self._dataset_info.sequence_size-1, context_size))
+          'Maximum support context size for dataset {} is {}, but '
+          'was {}.'.format(
+              dataset, self._dataset_info.sequence_size-1, context_size))
 
     self._context_size = context_size
     # Number of views in the context + target view
@@ -338,11 +338,11 @@ class GQNTFRecordDataset(tf.data.Dataset):
     self._custom_frame_size = custom_frame_size
 
     self._feature_map = {
-      'frames': tf.FixedLenFeature(
-        shape=self._dataset_info.sequence_size, dtype=tf.string),
-      'cameras': tf.FixedLenFeature(
-        shape=[self._dataset_info.sequence_size * _NUM_RAW_CAMERA_PARAMS],
-        dtype=tf.float32)
+        'frames': tf.FixedLenFeature(
+            shape=self._dataset_info.sequence_size, dtype=tf.string),
+        'cameras': tf.FixedLenFeature(
+            shape=[self._dataset_info.sequence_size * _NUM_RAW_CAMERA_PARAMS],
+            dtype=tf.float32)
     }
 
     file_names = _get_dataset_files(self._dataset_info, mode, root)
@@ -411,6 +411,9 @@ class GQNTFRecordDataset(tf.data.Dataset):
   # Delegate them to the dataset we create internally
   def _as_variant_tensor(self):
     return self._dataset._as_variant_tensor()
+
+  def _inputs(self):
+    return [self._dataset]
 
   @property
   def output_classes(self):

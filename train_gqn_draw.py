@@ -156,7 +156,6 @@ def main(unparsed_argv):
         hooks=[logging_hook],
     )
 
-
 if __name__ == '__main__':
   print("Training a GQN.")
   FLAGS, UNPARSED_ARGV = ARGPARSER.parse_known_args()

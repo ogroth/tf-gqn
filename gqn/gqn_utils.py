@@ -76,9 +76,9 @@ def eta_g(canvas,
           kernel_size=PARAMS.ETA_EXTERNAL_KERNEL_SIZE,
           channels=PARAMS.IMG_CHANNELS,
           scope="eta_g"):
-  return tf.layers.conv2d(
-      canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
-      name=scope)
+  with tf.variable_scope("eta_g", reuse=tf.AUTO_REUSE) as varscope:
+    return tf.layers.conv2d(
+      canvas, filters=channels, kernel_size=kernel_size, padding='SAME')
 
 
 @optional_scope

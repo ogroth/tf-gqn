@@ -19,7 +19,8 @@ import tensorflow as tf
 
 from .gqn_params import _GQNParams
 from .gqn_encoder import tower_encoder, pool_encoder
-from .gqn_draw import inference_rnn, generator_rnn
+#from .gqn_draw import inference_rnn, generator_rnn
+from .gqn_draw import generation_inference_rnn
 from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
 from .gqn_vae import vae_tower_decoder
 
@@ -81,8 +82,7 @@ def _encode_context(encoder_fn, context_poses, context_frames, model_params):
 def gqn_draw(
     query_pose: tf.Tensor, target_frame: tf.Tensor,
     context_poses: tf.Tensor, context_frames: tf.Tensor,
-    model_params: _GQNParams, is_training: bool = True,
-    scope: str = "GQN"):
+    model_params: _GQNParams, scope: str = "GQN"):
   """
   Defines the computational graph of the GQN model.
 
@@ -113,10 +113,12 @@ def gqn_draw(
 
   with tf.variable_scope(scope):
     endpoints = {}
+    endpoints_gen = {}
 
     enc_r, endpoints_enc = _encode_context(
         _ENC_FUNCTIONS[_ENC_TYPE], context_poses, context_frames, model_params)
     endpoints.update(endpoints_enc)
+    endpoints_gen.update(endpoints_enc)
 
     # broadcast scene representation to 1/4 of targeted frame size
     if _ENC_TYPE == 'pool':
@@ -126,23 +128,35 @@ def gqn_draw(
       enc_r_broadcast = tf.reshape(enc_r, [-1, _DIM_H_ENC, _DIM_W_ENC, _DIM_C_ENC])
 
     # define generator graph (with inference component if in training mode)
-    if is_training:
-      mu_target, endpoints_rnn = inference_rnn(
+    #if is_training:
+    #  mu_target, endpoints_rnn = inference_rnn(
+    #      representations=enc_r_broadcast,
+    #      query_poses=query_pose,
+    #      target_frames=target_frame,
+    #      sequence_size=_SEQ_LENGTH,
+    #  )
+    #else:
+    #  mu_target, endpoints_rnn = generator_rnn(
+    #      representations=enc_r_broadcast,
+    #      query_poses=query_pose,
+    #      sequence_size=_SEQ_LENGTH
+    #  )
+
+    #endpoints.update(endpoints_rnn)
+    #net = mu_target  # final mu tensor parameterizing target frame sampling
+    #return net, endpoints
+
+    mu_target, endpoints_rnn, mu_target_gen, endpoints_rnn_gen = generation_inference_rnn(
           representations=enc_r_broadcast,
           query_poses=query_pose,
           target_frames=target_frame,
           sequence_size=_SEQ_LENGTH,
       )
-    else:
-      mu_target, endpoints_rnn = generator_rnn(
-          representations=enc_r_broadcast,
-          query_poses=query_pose,
-          sequence_size=_SEQ_LENGTH
-      )
 
     endpoints.update(endpoints_rnn)
+    endpoints_gen.update(endpoints_rnn_gen)
     net = mu_target  # final mu tensor parameterizing target frame sampling
-    return net, endpoints
+    return net, endpoints, mu_target_gen, endpoints_gen
 
 
 def gqn_vae(

@@ -66,9 +66,9 @@ Additional requirements for development purposes can be found in ```dev_requirem
 ## Training
 ### Training Data
 
-The data provider implementation is adapted from: [https://github.com/deepmind/gqn-datasets]()
+The data provider implementation is adapted from: [https://github.com/deepmind/gqn-datasets](https://github.com/deepmind/gqn-datasets)
 
-The training datasets can be downloaded from: [https://console.cloud.google.com/storage/gqn-dataset]()
+The training datasets can be downloaded from: [https://console.cloud.google.com/storage/gqn-dataset](https://console.cloud.google.com/storage/gqn-dataset)
 
 To download the datasets you can use the [`gsutil cp`](https://cloud.google.com/storage/docs/gsutil/commands/cp) command; see also the `gsutil` [installation instructions](https://cloud.google.com/storage/docs/gsutil_install).
 

@@ -7,7 +7,7 @@ from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
-from .gqn_params import PARAMS
+from .gqn_params import GQN_DEFAULT_CONFIG
 
 
 # scoping utilities
@@ -56,7 +56,7 @@ def broadcast_pose(vector, height, width):
   """
   Broadcasts a pose vector to every pixel of a target image.
   """
-  vector = tf.reshape(vector, [-1, 1, 1, PARAMS.POSE_CHANNELS])
+  vector = tf.reshape(vector, [-1, 1, 1, GQN_DEFAULT_CONFIG.POSE_CHANNELS])
   vector = tf.tile(vector, [1, height, width, 1])
   return vector
 
@@ -65,7 +65,7 @@ def broadcast_encoding(vector, height, width):
   """
   Broadcasts a scene encoding to every pixel of a target image.
   """
-  vector = tf.reshape(vector, [-1, 1, 1, PARAMS.ENC_CHANNELS])
+  vector = tf.reshape(vector, [-1, 1, 1, GQN_DEFAULT_CONFIG.ENC_CHANNELS])
   vector = tf.tile(vector, [1, height, width, 1])
   return vector
 
@@ -73,8 +73,8 @@ def broadcast_encoding(vector, height, width):
 # sampling utilities
 
 def eta_g(canvas,
-          kernel_size=PARAMS.ETA_EXTERNAL_KERNEL_SIZE,
-          channels=PARAMS.IMG_CHANNELS,
+          kernel_size=GQN_DEFAULT_CONFIG.ETA_EXTERNAL_KERNEL_SIZE,
+          channels=GQN_DEFAULT_CONFIG.IMG_CHANNELS,
           scope="eta_g"):
   return tf.layers.conv2d(
       canvas, filters=channels, kernel_size=kernel_size, padding='SAME',
@@ -82,7 +82,7 @@ def eta_g(canvas,
 
 
 @optional_scope
-def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
+def eta(h, kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE, channels=GQN_DEFAULT_CONFIG.Z_CHANNELS):
   """
   Computes sufficient statistics of a normal distribution (mu, sigma) from a
   hidden state representation via convolution.
@@ -98,7 +98,7 @@ def eta(h, kernel_size=PARAMS.LSTM_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
 
 
 @optional_scope
-def compute_eta_and_sample_z(h, kernel_size=PARAMS.ETA_INTERNAL_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
+def compute_eta_and_sample_z(h, kernel_size=GQN_DEFAULT_CONFIG.ETA_INTERNAL_KERNEL_SIZE, channels=GQN_DEFAULT_CONFIG.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.
@@ -115,7 +115,7 @@ def compute_eta_and_sample_z(h, kernel_size=PARAMS.ETA_INTERNAL_KERNEL_SIZE, cha
 
 
 @optional_scope
-def sample_z(h, kernel_size=PARAMS.ETA_INTERNAL_KERNEL_SIZE, channels=PARAMS.Z_CHANNELS):
+def sample_z(h, kernel_size=GQN_DEFAULT_CONFIG.ETA_INTERNAL_KERNEL_SIZE, channels=GQN_DEFAULT_CONFIG.Z_CHANNELS):
   """
   Samples a variational encoding vector z from a normal distribution parameterized by a hidden
   state h.

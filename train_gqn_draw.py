@@ -12,7 +12,7 @@ import argparse
 import tensorflow as tf
 
 from gqn.gqn_model import gqn_draw_model_fn
-from gqn.gqn_params import PARAMS
+from gqn.gqn_params import create_gqn_config
 from data_provider.gqn_tfr_provider import gqn_input_fn
 
 
@@ -33,9 +33,13 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--model_dir', type=str, default='/tmp/models/gqn',
     help='The directory where the model will be stored.')
+# model parameters
+ARGPARSER.add_argument(
+    '--seq_length', type=int, default=8,
+    help='The number of generation steps of the DRAW LSTM.')
 # training parameters
 ARGPARSER.add_argument(
-    '--train_epochs', type=int, default=40,
+    '--train_epochs', type=int, default=2,
     help='The number of epochs to train.')
 # snapshot parameters
 ARGPARSER.add_argument(
@@ -86,8 +90,12 @@ def main(unparsed_argv):
       session_config=sess_config,
       save_checkpoints_steps=FLAGS.chkpt_steps,
   )
+  custom_params = {
+      'SEQ_LENGTH' : FLAGS.seq_length,
+  }
+  gqn_config = create_gqn_config(custom_params)
   model_params = {
-      'gqn_params' : PARAMS,
+      'gqn_params' : gqn_config,
       'debug' : FLAGS.debug,
   }
   classifier = tf.estimator.Estimator(
@@ -110,7 +118,7 @@ def main(unparsed_argv):
   if FLAGS.initial_eval:
     eval_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
-        context_size=PARAMS.CONTEXT_SIZE,
+        context_size=gqn_config.CONTEXT_SIZE,
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.EVAL,
         batch_size=FLAGS.batch_size,
@@ -128,7 +136,7 @@ def main(unparsed_argv):
     # train the model for one epoch
     train_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
-        context_size=PARAMS.CONTEXT_SIZE,
+        context_size=gqn_config.CONTEXT_SIZE,
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.TRAIN,
         batch_size=FLAGS.batch_size,
@@ -144,7 +152,7 @@ def main(unparsed_argv):
     # evaluate the model on the validation set
     eval_input = lambda: gqn_input_fn(
         dataset=FLAGS.dataset,
-        context_size=PARAMS.CONTEXT_SIZE,
+        context_size=gqn_config.CONTEXT_SIZE,
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.EVAL,
         batch_size=FLAGS.batch_size,

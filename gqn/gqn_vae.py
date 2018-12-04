@@ -8,7 +8,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from .gqn_params import PARAMS
+from .gqn_params import GQN_DEFAULT_CONFIG
 from .gqn_utils import broadcast_pose
 
 
@@ -66,7 +66,7 @@ def vae_simple_decoder(z, scope="VAESimpleDecoder"):
 
 
 def vae_tower_decoder(
-    z, query_pose, output_channels=PARAMS.LSTM_CANVAS_CHANNELS,
+    z, query_pose, output_channels=GQN_DEFAULT_CONFIG.LSTM_CANVAS_CHANNELS,
     scope="VAETowerDecoder"):
   """
   Defines VAE tower decoder graph for image generation based on a GQN scene \

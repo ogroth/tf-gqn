@@ -27,7 +27,7 @@ from collections import namedtuple
 
 import tensorflow as tf
 
-from .gqn_params import PARAMS
+from .gqn_params import GQN_DEFAULT_CONFIG
 from .gqn_utils import broadcast_pose, create_sub_scope, \
   eta_g, compute_eta_and_sample_z, sample_z
 
@@ -307,7 +307,7 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
 
     state = tf.contrib.rnn.LSTMStateTuple(cell_state, hidden_state)
     output, new_state = self._gqn_cell(
-      input_dict, state, scope=create_sub_scope(scope, "GQNCell"))
+        input_dict, state, scope=create_sub_scope(scope, "GQNCell"))
 
     return _InferenceCellOutput(output), _InferenceCellState(new_state)
 
@@ -325,10 +325,10 @@ def generator_rnn(representations, query_poses, sequence_size=12,
   height, width = dim_r[1], dim_r[2]
 
   cell = GeneratorLSTMCell(
-      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
-      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
-      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
-      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, GQN_DEFAULT_CONFIG.GENERATOR_INPUT_CHANNELS],
+      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=GQN_DEFAULT_CONFIG.LSTM_CANVAS_CHANNELS,
+      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
       name="GeneratorCell")
 
   outputs = []
@@ -358,7 +358,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1].canvas
 
-  mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=GQN_DEFAULT_CONFIG.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints
@@ -377,15 +377,15 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
   height, width = dim_r[1], dim_r[2]
 
   generator_cell = GeneratorLSTMCell(
-      input_shape=[height, width, PARAMS.GENERATOR_INPUT_CHANNELS],
-      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
-      canvas_channels=PARAMS.LSTM_CANVAS_CHANNELS,
-      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, GQN_DEFAULT_CONFIG.GENERATOR_INPUT_CHANNELS],
+      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=GQN_DEFAULT_CONFIG.LSTM_CANVAS_CHANNELS,
+      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
       name="GeneratorCell")
   inference_cell = InferenceLSTMCell(
-      input_shape=[height, width, PARAMS.INFERENCE_INPUT_CHANNELS],
-      output_channels=PARAMS.LSTM_OUTPUT_CHANNELS,
-      kernel_size=PARAMS.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, GQN_DEFAULT_CONFIG.INFERENCE_INPUT_CHANNELS],
+      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
+      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
       name="InferenceCell")
 
   outputs = []
@@ -443,7 +443,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1][1].canvas
 
-  mu_target = eta_g(target_canvas, channels=PARAMS.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=GQN_DEFAULT_CONFIG.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints

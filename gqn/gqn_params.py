@@ -7,8 +7,10 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import copy
 
-_DEFAULTS = {
+
+GQN_DEFAULT_PARAM_DICT = {
     # constants
     'IMG_HEIGHT' : 64,
     'IMG_WIDTH' : 64,
@@ -41,8 +43,24 @@ _DEFAULTS = {
     'ADAM_LR_BETA' : 5 * 10e-6,  # final learning rate of ADAM optimizer, orig.: 5 * 10e-5
 }
 
-_GQNParams = collections.namedtuple(
-    typename='GQNParams',
-    field_names=list(_DEFAULTS.keys())
+GQNConfig = collections.namedtuple(
+    typename='GQNConfig',
+    field_names=list(GQN_DEFAULT_PARAM_DICT.keys())
     )
-PARAMS = _GQNParams(**_DEFAULTS)
+GQN_DEFAULT_CONFIG = GQNConfig(**GQN_DEFAULT_PARAM_DICT)
+
+
+def create_gqn_config(custom_params: dict) -> GQNConfig:
+  """
+  Customizes the default parameters of the GQN with the parameters specified in
+  'custom_params'.
+
+  Returns:
+    GQNConfig
+  """
+  customized_keys = list(
+      set(custom_params.keys()).intersection(set(GQN_DEFAULT_PARAM_DICT.keys())))
+  customized_params = copy.deepcopy(GQN_DEFAULT_PARAM_DICT)
+  for k in customized_keys:
+    customized_params[k] = custom_params[k]
+  return GQNConfig(**customized_params)

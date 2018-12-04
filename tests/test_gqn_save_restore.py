@@ -11,18 +11,18 @@ sys.path.append(TF_GQN_HOME)
 import tensorflow as tf
 import numpy as np
 
-from gqn.gqn_params import PARAMS
+from gqn.gqn_params import GQN_DEFAULT_CONFIG
 from gqn.gqn_graph import gqn_draw
 
 
 # constants
 _BATCH_SIZE = 1
-_CONTEXT_SIZE = PARAMS.CONTEXT_SIZE
-_DIM_POSE = PARAMS.POSE_CHANNELS
-_DIM_H_IMG = PARAMS.IMG_HEIGHT
-_DIM_W_IMG = PARAMS.IMG_WIDTH
-_DIM_C_IMG = PARAMS.IMG_CHANNELS
-_SEQ_LENGTH = PARAMS.SEQ_LENGTH
+_CONTEXT_SIZE = GQN_DEFAULT_CONFIG.CONTEXT_SIZE
+_DIM_POSE = GQN_DEFAULT_CONFIG.POSE_CHANNELS
+_DIM_H_IMG = GQN_DEFAULT_CONFIG.IMG_HEIGHT
+_DIM_W_IMG = GQN_DEFAULT_CONFIG.IMG_WIDTH
+_DIM_C_IMG = GQN_DEFAULT_CONFIG.IMG_CHANNELS
+_SEQ_LENGTH = GQN_DEFAULT_CONFIG.SEQ_LENGTH
 
 
 def create_input_placeholders():
@@ -51,7 +51,7 @@ net, ep_gqn = gqn_draw(
     target_frame=target_frame,
     context_poses=context_poses,
     context_frames=context_frames,
-    model_params=PARAMS,
+    model_params=GQN_DEFAULT_CONFIG,
     is_training=True
 )
 
@@ -93,12 +93,12 @@ query_pose, target_frame, context_poses, context_frames = \
 
 # graph definition in test mode
 net, ep_gqn = gqn_draw(
-  query_pose=query_pose,
-  target_frame=target_frame,
-  context_poses=context_poses,
-  context_frames=context_frames,
-  model_params=PARAMS,
-  is_training=False
+    query_pose=query_pose,
+    target_frame=target_frame,
+    context_poses=context_poses,
+    context_frames=context_frames,
+    model_params=GQN_DEFAULT_CONFIG,
+    is_training=False
 )
 
 
@@ -110,13 +110,13 @@ with tf.Session() as sess:
 
   # Run network forward, shouldn't complain about uninitialised variables
   sess.run(
-    net,
-    feed_dict={
-      query_pose: rnd_query_pose,
-      target_frame: rnd_target_frame,
-      context_poses: rnd_context_poses,
-      context_frames: rnd_context_frames,
-    })
+      net,
+      feed_dict={
+          query_pose: rnd_query_pose,
+          target_frame: rnd_target_frame,
+          context_poses: rnd_context_poses,
+          context_frames: rnd_context_frames,
+      })
 print("Restored variables and ran a forward pass... Yay!")
 
 print("TEST PASSED!")

@@ -12,17 +12,17 @@ sys.path.append(TF_GQN_HOME)
 import tensorflow as tf
 import numpy as np
 
-from gqn.gqn_params import PARAMS
+from gqn.gqn_params import GQN_DEFAULT_CONFIG
 from gqn.gqn_encoder import pool_encoder
 
 # constants
 _BATCH_SIZE = 1
 _CONTEXT_SIZE = 5
-_DIM_POSE = PARAMS.POSE_CHANNELS
-_DIM_H_IMG = PARAMS.IMG_HEIGHT
-_DIM_W_IMG = PARAMS.IMG_WIDTH
-_DIM_C_IMG = PARAMS.IMG_CHANNELS
-_DIM_C_ENC = PARAMS.ENC_CHANNELS
+_DIM_POSE = GQN_DEFAULT_CONFIG.POSE_CHANNELS
+_DIM_H_IMG = GQN_DEFAULT_CONFIG.IMG_HEIGHT
+_DIM_W_IMG = GQN_DEFAULT_CONFIG.IMG_WIDTH
+_DIM_C_IMG = GQN_DEFAULT_CONFIG.IMG_CHANNELS
+_DIM_C_ENC = GQN_DEFAULT_CONFIG.ENC_CHANNELS
 
 # input placeholders
 context_poses = tf.placeholder(
@@ -49,7 +49,7 @@ with tf.Session() as sess:
   feed_dict = {
       context_poses : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_POSE),
       context_frames : np.random.rand(_BATCH_SIZE, _CONTEXT_SIZE, _DIM_H_IMG, _DIM_W_IMG, _DIM_C_IMG),
-  }  
+  }
   r = sess.run(r_encoder, feed_dict=feed_dict)
   print(r)
   print(r.shape)

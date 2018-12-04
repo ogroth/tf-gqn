@@ -17,7 +17,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-from .gqn_params import _GQNParams
+from .gqn_params import GQNConfig
 from .gqn_encoder import tower_encoder, pool_encoder
 from .gqn_draw import inference_rnn, generator_rnn
 from .gqn_utils import broadcast_encoding, compute_eta_and_sample_z
@@ -25,8 +25,8 @@ from .gqn_vae import vae_tower_decoder
 
 
 _ENC_FUNCTIONS = {
-  'pool' : pool_encoder,
-  'tower' : tower_encoder,
+    'pool' : pool_encoder,
+    'tower' : tower_encoder,
 }
 
 def _pack_context(context_poses, context_frames, model_params):
@@ -81,7 +81,7 @@ def _encode_context(encoder_fn, context_poses, context_frames, model_params):
 def gqn_draw(
     query_pose: tf.Tensor, target_frame: tf.Tensor,
     context_poses: tf.Tensor, context_frames: tf.Tensor,
-    model_params: _GQNParams, is_training: bool = True,
+    model_params: GQNConfig, is_training: bool = True,
     scope: str = "GQN"):
   """
   Defines the computational graph of the GQN model.
@@ -148,7 +148,7 @@ def gqn_draw(
 def gqn_vae(
     query_pose: tf.Tensor,
     context_poses: tf.Tensor, context_frames: tf.Tensor,
-    model_params: _GQNParams, scope: str = "GQN-VAE"):
+    model_params: GQNConfig, scope: str = "GQN-VAE"):
   """
   Defines the computational graph of the GQN-VAE baseline model.
 

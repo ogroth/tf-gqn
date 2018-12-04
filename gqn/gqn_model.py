@@ -3,10 +3,10 @@ Contains the tf.estimator compatible model definition for GQN.
 
 Original paper:
 'Neural scene representation and rendering'
-S. M. Ali Eslami, Danilo J. Rezende, Frederic Besse, Fabio Viola, Ari S. Morcos, 
-Marta Garnelo, Avraham Ruderman, Andrei A. Rusu, Ivo Danihelka, Karol Gregor, 
-David P. Reichert, Lars Buesing, Theophane Weber, Oriol Vinyals, Dan Rosenbaum, 
-Neil Rabinowitz, Helen King, Chloe Hillier, Matt Botvinick, Daan Wierstra, 
+S. M. Ali Eslami, Danilo J. Rezende, Frederic Besse, Fabio Viola, Ari S. Morcos,
+Marta Garnelo, Avraham Ruderman, Andrei A. Rusu, Ivo Danihelka, Karol Gregor,
+David P. Reichert, Lars Buesing, Theophane Weber, Oriol Vinyals, Dan Rosenbaum,
+Neil Rabinowitz, Helen King, Chloe Hillier, Matt Botvinick, Daan Wierstra,
 Koray Kavukcuoglu and Demis Hassabis
 https://deepmind.com/documents/211/Neural_Scene_Representation_and_Rendering_preprint.pdf
 """
@@ -19,11 +19,11 @@ import tensorflow as tf
 
 from .gqn_graph import gqn_draw, gqn_vae
 from .gqn_objective import gqn_draw_elbo, gqn_vae_elbo
-from .gqn_params import _GQNParams, _DEFAULTS
+from .gqn_params import GQNConfig, GQN_DEFAULT_PARAM_DICT
 from .gqn_utils import debug_canvas_image_mean
 
 
-def _linear_noise_annealing(gqn_params: _GQNParams) -> tf.Tensor:
+def _linear_noise_annealing(gqn_params: GQNConfig) -> tf.Tensor:
   """
   Defines the computational graph for the global sigma annealing scheme used in
   image sampling.
@@ -37,7 +37,7 @@ def _linear_noise_annealing(gqn_params: _GQNParams) -> tf.Tensor:
       sigma_f)
   return sigma_target
 
-def _linear_lr_annealing(gqn_params: _GQNParams) -> tf.Tensor:
+def _linear_lr_annealing(gqn_params: GQNConfig) -> tf.Tensor:
   """
   Defines the computational graph for the global learning rate annealing scheme
   used during optimization.
@@ -70,8 +70,8 @@ def gqn_draw_model_fn(features, labels, mode, params):
   """
 
   # shorthand notations for parameters
-  _CONTEXT_SIZE = params['gqn_params'].CONTEXT_SIZE
-  _SEQ_LENGTH = params['gqn_params'].SEQ_LENGTH
+  ctx_size = params['gqn_params'].CONTEXT_SIZE
+  seq_length = params['gqn_params'].SEQ_LENGTH
 
   # feature and label mapping according to gqn_input_fn
   query_pose = features.query_camera
@@ -101,7 +101,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
       name='l2_reconstruction')
   # write out image summaries in debug mode
   if params['debug']:
-    for i in range(_CONTEXT_SIZE):
+    for i in range(ctx_size):
       tf.summary.image(
           'context_frame_%d' % (i + 1),
           context_frames[:, i],
@@ -122,7 +122,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
         l2_reconstruction[1]
     )
     generator_sequence = debug_canvas_image_mean(
-        [ep_gqn['canvas_{}'.format(i)] for i in range(_SEQ_LENGTH)]
+        [ep_gqn['canvas_{}'.format(i)] for i in range(seq_length)]
     )
     tf.summary.image(
         'generator_sequence_mean',
@@ -141,7 +141,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
   if mode != tf.estimator.ModeKeys.PREDICT:
     # collect intermediate endpoints
     mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
-    for i in range(_SEQ_LENGTH):
+    for i in range(seq_length):
       mu_q.append(ep_gqn["mu_q_%d" % i])
       sigma_q.append(ep_gqn["sigma_q_%d" % i])
       mu_pi.append(ep_gqn["mu_pi_%d" % i])
@@ -217,9 +217,9 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
   """
 
   # customize parameters
-  custom_params_dict = _DEFAULTS
+  custom_params_dict = GQN_DEFAULT_PARAM_DICT
   custom_params_dict['CONTEXT_SIZE'] = 1
-  custom_params = _GQNParams(**custom_params_dict)
+  custom_params = GQNConfig(**custom_params_dict)
 
   # shorthand notations for parameters
   _CONTEXT_SIZE = custom_params.CONTEXT_SIZE

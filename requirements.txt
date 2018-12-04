@@ -8,7 +8,7 @@ Markdown==2.6.11
 numpy==1.14.5
 protobuf==3.6.0
 six==1.11.0
-tensorboard==1.8.0
-tensorflow==1.8.0
+tensorboard==1.12.0
+tensorflow==1.12.0
 termcolor==1.1.0
 Werkzeug==0.14.1

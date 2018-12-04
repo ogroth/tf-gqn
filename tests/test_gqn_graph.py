@@ -12,17 +12,17 @@ sys.path.append(TF_GQN_HOME)
 import tensorflow as tf
 import numpy as np
 
-from gqn.gqn_params import PARAMS
+from gqn.gqn_params import GQN_DEFAULT_CONFIG
 from gqn.gqn_graph import gqn_draw, gqn_vae
 
 # constants
 _BATCH_SIZE = 1
-_CONTEXT_SIZE = PARAMS.CONTEXT_SIZE
-_DIM_POSE = PARAMS.POSE_CHANNELS
-_DIM_H_IMG = PARAMS.IMG_HEIGHT
-_DIM_W_IMG = PARAMS.IMG_WIDTH
-_DIM_C_IMG = PARAMS.IMG_CHANNELS
-_SEQ_LENGTH = PARAMS.SEQ_LENGTH
+_CONTEXT_SIZE = GQN_DEFAULT_CONFIG.CONTEXT_SIZE
+_DIM_POSE = GQN_DEFAULT_CONFIG.POSE_CHANNELS
+_DIM_H_IMG = GQN_DEFAULT_CONFIG.IMG_HEIGHT
+_DIM_W_IMG = GQN_DEFAULT_CONFIG.IMG_WIDTH
+_DIM_C_IMG = GQN_DEFAULT_CONFIG.IMG_CHANNELS
+_SEQ_LENGTH = GQN_DEFAULT_CONFIG.SEQ_LENGTH
 
 # input placeholders
 query_pose = tf.placeholder(
@@ -43,15 +43,15 @@ net, ep_gqn = gqn_draw(
     target_frame=target_frame,
     context_poses=context_poses,
     context_frames=context_frames,
-    model_params=PARAMS,
+    model_params=GQN_DEFAULT_CONFIG,
     is_training=True
 )
 
 net_vae, ep_gqn_vae = gqn_vae(
-  query_pose=query_pose,
-  context_poses=context_poses,
-  context_frames=context_frames,
-  model_params=PARAMS,
+    query_pose=query_pose,
+    context_poses=context_poses,
+    context_frames=context_frames,
+    model_params=GQN_DEFAULT_CONFIG,
 )
 
 # feed random input through the graph

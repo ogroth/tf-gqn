@@ -37,6 +37,13 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--seq_length', type=int, default=8,
     help='The number of generation steps of the DRAW LSTM.')
+# solver parameters
+ARGPARSER.add_argument(
+    '--adam_lr_alpha', type=float, default=5*10e-5,
+    help='The initial learning rate of the ADAM solver.')
+ARGPARSER.add_argument(
+    '--adam_lr_beta', type=float, default=5*10e-6,
+    help='The final learning rate of the ADAM solver.')
 # training parameters
 ARGPARSER.add_argument(
     '--train_epochs', type=int, default=2,
@@ -92,6 +99,8 @@ def main(unparsed_argv):
   )
   custom_params = {
       'SEQ_LENGTH' : FLAGS.seq_length,
+      'ADAM_LR_ALPHA' : FLAGS.adam_lr_alpha,
+      'ADAM_LR_BETA' : FLAGS.adam_lr_beta,
   }
   gqn_config = create_gqn_config(custom_params)
   model_params = {

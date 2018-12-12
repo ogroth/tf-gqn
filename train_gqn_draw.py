@@ -149,7 +149,6 @@ def main(unparsed_argv):
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.TRAIN,
         batch_size=FLAGS.batch_size,
-        num_epochs=FLAGS.train_epochs,
         num_threads=FLAGS.queue_threads,
         buffer_size=FLAGS.queue_buffer,
     )

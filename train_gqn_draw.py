@@ -37,12 +37,18 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--seq_length', type=int, default=8,
     help='The number of generation steps of the DRAW LSTM.')
+ARGPARSER.add_argument(
+    '--context_size', type=int, default=5,
+    help='The number of context points.')
+ARGPARSER.add_argument(
+    '--img_size', type=int, default=64,
+    help='Height and width of the squared input images.')
 # solver parameters
 ARGPARSER.add_argument(
-    '--adam_lr_alpha', type=float, default=5*10e-5,
+    '--adam_lr_alpha', type=float, default=5*10e-4,
     help='The initial learning rate of the ADAM solver.')
 ARGPARSER.add_argument(
-    '--adam_lr_beta', type=float, default=5*10e-6,
+    '--adam_lr_beta', type=float, default=5*10e-5,
     help='The final learning rate of the ADAM solver.')
 # training parameters
 ARGPARSER.add_argument(
@@ -98,6 +104,9 @@ def main(unparsed_argv):
       save_checkpoints_steps=FLAGS.chkpt_steps,
   )
   custom_params = {
+      'IMG_HEIGHT' : FLAGS.img_size,
+      'IMG_WIDTH' : FLAGS.img_size,
+      'CONTEXT_SIZE' : FLAGS.context_size,
       'SEQ_LENGTH' : FLAGS.seq_length,
       'ADAM_LR_ALPHA' : FLAGS.adam_lr_alpha,
       'ADAM_LR_BETA' : FLAGS.adam_lr_beta,
@@ -131,6 +140,7 @@ def main(unparsed_argv):
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.EVAL,
         batch_size=FLAGS.batch_size,
+        custom_frame_size=FLAGS.img_size,
         num_threads=FLAGS.queue_threads,
         buffer_size=FLAGS.queue_buffer,
     )
@@ -149,6 +159,7 @@ def main(unparsed_argv):
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.TRAIN,
         batch_size=FLAGS.batch_size,
+        custom_frame_size=FLAGS.img_size,
         num_threads=FLAGS.queue_threads,
         buffer_size=FLAGS.queue_buffer,
     )
@@ -164,6 +175,7 @@ def main(unparsed_argv):
         root=FLAGS.data_dir,
         mode=tf.estimator.ModeKeys.EVAL,
         batch_size=FLAGS.batch_size,
+        custom_frame_size=FLAGS.img_size,
         num_threads=FLAGS.queue_threads,
         buffer_size=FLAGS.queue_buffer,
     )

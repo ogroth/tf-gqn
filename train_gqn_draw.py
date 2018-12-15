@@ -45,10 +45,10 @@ ARGPARSER.add_argument(
     help='Height and width of the squared input images.')
 # solver parameters
 ARGPARSER.add_argument(
-    '--adam_lr_alpha', type=float, default=5*10e-4,
+    '--adam_lr_alpha', type=float, default=5*10e-5,
     help='The initial learning rate of the ADAM solver.')
 ARGPARSER.add_argument(
-    '--adam_lr_beta', type=float, default=5*10e-5,
+    '--adam_lr_beta', type=float, default=5*10e-6,
     help='The final learning rate of the ADAM solver.')
 # training parameters
 ARGPARSER.add_argument(

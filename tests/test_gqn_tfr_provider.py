@@ -38,7 +38,7 @@ FLAGS = parser.parse_args()
 
 
 # graph definition
-data_reader = DataReader(dataset=FLAGS.dataset, context_size=FLAGS.context_size, root=FLAGS.root_dir)
+data_reader = DataReader(dataset=FLAGS.dataset, context_size=FLAGS.context_size, root=FLAGS.data_dir)
 data = data_reader.read(batch_size=FLAGS.batch_size)
 
 # fetch one batch of data

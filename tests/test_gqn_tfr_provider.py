@@ -15,7 +15,7 @@ from data_provider.gqn_tfr_provider import DataReader
 
 parser = argparse.ArgumentParser(description='Test the DataReader')
 parser.add_argument(
-    '--root_dir', type=str, default='/tmp/data/gqn-dataset',
+    '--data_dir', type=str, default='/tmp/data/gqn-dataset',
     help='The path to the gqn-dataset directory.'
 )
 parser.add_argument(

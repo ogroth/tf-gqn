@@ -1,7 +1,7 @@
 """
 Input pipeline (tf.dataset and input_fn) for GQN datasets.
 Adapted from the implementation provided here:
-https://github.com/deepmind/gqn-datasets/blob/master/data_reader.py
+https://github.com/deepmind/gqn-datasets/blob/acca9db6d9aa7cfa4c41ded45ccb96fecc9b272e/data_reader.py
 """
 
 from __future__ import absolute_import

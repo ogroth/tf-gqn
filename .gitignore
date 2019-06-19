@@ -109,3 +109,8 @@ venv.bak/
 
 # compute cluster specific files
 cluster/
+
+# data directories (will be re-created by scripts)
+data/
+models/
+tmp/

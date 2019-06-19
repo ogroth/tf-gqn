@@ -56,6 +56,14 @@ _DATASETS = dict(
         frame_size=64,
         sequence_size=10),
 
+    # super-small subset of rooms_ring for debugging purposes
+    rooms_ring_camera_debug=DatasetInfo(
+        basepath='rooms_ring_camera_debug',
+        train_size=1,
+        test_size=1,
+        frame_size=64,
+        sequence_size=10),
+
     rooms_free_camera_no_object_rotations=DatasetInfo(
         basepath='rooms_free_camera_no_object_rotations',
         train_size=2160,
@@ -120,7 +128,8 @@ def _parse(raw_data, dataset_info):
           shape=[dataset_info.sequence_size * _NUM_RAW_CAMERA_PARAMS],
           dtype=tf.float32)
   }
-  example = tf.parse_example(raw_data, feature_map)
+  # example = tf.parse_example(raw_data, feature_map)
+  example = tf.parse_single_example(raw_data, feature_map)
   return example
 
 def _preprocess(example, indices, context_size, custom_frame_size, dataset_info):
@@ -128,17 +137,17 @@ def _preprocess(example, indices, context_size, custom_frame_size, dataset_info)
   # frames
   example_size = context_size + 1
   frames = tf.concat(example['frames'], axis=0)
-  frames = tf.gather(frames, indices, axis=1)
+  frames = tf.gather(frames, indices, axis=0)
   frames = tf.map_fn(
       _convert_frame_data, tf.reshape(frames, [-1]),
       dtype=tf.float32, back_prop=False)
   dataset_image_dimensions = tuple(
       [dataset_info.frame_size] * 2 + [_NUM_CHANNELS])
   frames = tf.reshape(
-      frames, (-1, example_size) + dataset_image_dimensions)
+      frames, (example_size, ) + dataset_image_dimensions)
   if (custom_frame_size and
       custom_frame_size != dataset_info.frame_size):
-    frames = tf.reshape(frames, (-1,) + dataset_image_dimensions)
+    frames = tf.reshape(frames, dataset_image_dimensions)
     new_frame_dimensions = (custom_frame_size,) * 2 + (_NUM_CHANNELS,)
     frames = tf.image.resize_bilinear(
         frames, new_frame_dimensions[:2], align_corners=True)
@@ -148,13 +157,13 @@ def _preprocess(example, indices, context_size, custom_frame_size, dataset_info)
   raw_pose_params = example['cameras']
   raw_pose_params = tf.reshape(
       raw_pose_params,
-      [-1, dataset_info.sequence_size, _NUM_RAW_CAMERA_PARAMS])
-  raw_pose_params = tf.gather(raw_pose_params, indices, axis=1)
-  pos = raw_pose_params[:, :, 0:3]
-  yaw = raw_pose_params[:, :, 3:4]
-  pitch = raw_pose_params[:, :, 4:5]
+      [dataset_info.sequence_size, _NUM_RAW_CAMERA_PARAMS])
+  raw_pose_params = tf.gather(raw_pose_params, indices, axis=0)
+  pos = raw_pose_params[:, 0:3]
+  yaw = raw_pose_params[:, 3:4]
+  pitch = raw_pose_params[:, 4:5]
   cameras = tf.concat(
-      [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=2)
+      [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=-1)
   # return preprocessed tuple
   preprocessed_example = {}
   preprocessed_example['frames'] = frames
@@ -180,9 +189,9 @@ def _prepare(preprocessed_example):
 
 def gqn_input_fn(
     dataset_name,
-    context_size,
     root,
     mode,
+    context_size,
     batch_size=1,
     num_epochs=1,
     # optionally reshape frames
@@ -198,9 +207,9 @@ def gqn_input_fn(
           'rooms_free_camera_no_object_rotations',
           'rooms_free_camera_with_object_rotations', 'shepard_metzler_5_parts',
           'shepard_metzler_7_parts'].
-      context_size: integer, number of views to be used to assemble the context.
       root: string, path to the root folder of the data.
       mode: one of tf.estimator.ModeKeys.
+      context_size: integer, number of views to be used to assemble the context.
       batch_size: (optional) batch size, defaults to 1.
       num_epochs: (optional) number of times to go through the dataset,
           defaults to 1.
@@ -212,6 +221,14 @@ def gqn_input_fn(
           shuffle buffer, defaults to 256.
       seed: (optional) integer, seed for the random number generators used in
           the dataset.
+
+    Returns:
+      tf.data.dataset yielding tuples of the form (features, labels)
+      shapes:
+        features.query.context.cameras: [N, K, 7]
+        features.query.context.frames: [N, K, H, W, 3]
+        features.query.query_camera: [N, 7]
+        features.target (same as labels): [N, H, W, 3]
 
     Raises:
       ValueError: if the required version does not exist; if the required mode

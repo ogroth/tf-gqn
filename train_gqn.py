@@ -152,6 +152,8 @@ def main(unparsed_argv):
         'IMG_WIDTH' : ARGS.img_size,
         'CONTEXT_SIZE' : ARGS.context_size,
         'SEQ_LENGTH' : ARGS.seq_length,
+        'ENC_HEIGHT' : ARGS.img_size // 4,  # must be 1/4 of target frame height
+        'ENC_WIDTH' : ARGS.img_size // 4,  # must be 1/4 of target frame width
         'ADAM_LR_ALPHA' : ARGS.adam_lr_alpha,
         'ADAM_LR_BETA' : ARGS.adam_lr_beta,
         'ANNEAL_LR_TAU' : ARGS.anneal_lr_tau,

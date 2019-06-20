@@ -95,7 +95,6 @@ def gqn_draw_model_fn(features, labels, mode, params):
       model_params=params['gqn_params'],
       is_training=(mode == tf.estimator.ModeKeys.TRAIN)
   )
-
   # outputs: mean images
   mu_target = net
   sigma_target = _linear_noise_annealing(params['gqn_params'])
@@ -109,15 +108,23 @@ def gqn_draw_model_fn(features, labels, mode, params):
         name='l2_reconstruction')
   # write out image summaries in debug mode
   if params['debug']:
+    # context frames
+    ctx_frames = []
+    ctx_shape = tf.shape(context_frames)
+    batch, height = ctx_shape[0], ctx_shape[2]
+    white_vertical_bar = tf.ones(
+        shape=(batch, height, 2, 3), dtype=tf.float32, name='ctx_separator')
     for i in range(ctx_size):
-      tf.summary.image(
-          'context_frame_%02d' % (i + 1),
-          context_frames[:, i],
-          max_outputs=1
-      )
+      ctx_frames.append(context_frames[:, i])
+      ctx_frames.append(white_vertical_bar)
+    tf.summary.image(
+        name='context_frames',
+        tensor=tf.concat(ctx_frames, axis=-2, name='context_grid'),
+        max_outputs=1
+    )
     # target images
     tf.summary.image(
-        name='target_image',
+        name='target_frame',
         tensor=target_frame,
         max_outputs=1
     )

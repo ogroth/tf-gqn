@@ -53,6 +53,10 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--adam_lr_beta', type=float, default=5*10e-6,
     help='The final learning rate of the ADAM solver.')
+ARGPARSER.add_argument(
+    '--anneal_lr_tau', type=int, default=1600000,
+    help='The interval over which to anneal the learning rate from lr_alpha to \
+      lr_beta.')
 # training parameters
 ARGPARSER.add_argument(
     '--train_epochs', type=int, default=2,
@@ -73,7 +77,7 @@ ARGPARSER.add_argument(
     '--queue_threads', type=int, default=4,
     help='How many parallel threads to run for data queuing.')
 ARGPARSER.add_argument(
-    '--queue_buffer', type=int, default=32,
+    '--queue_buffer', type=int, default=4,
     help='How many batches to queue up.')
 # logging
 ARGPARSER.add_argument(

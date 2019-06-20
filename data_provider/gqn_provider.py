@@ -277,5 +277,5 @@ def gqn_input_fn(
   # set up batching
   dataset = dataset.repeat(num_epochs)
   dataset = dataset.batch(batch_size)
-  dataset = dataset.prefetch(buffer_size * batch_size)
+  dataset = dataset.prefetch(buffer_size)
   return dataset

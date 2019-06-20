@@ -72,7 +72,7 @@ def _encode_context(encoder_fn, context_poses, context_frames, model_params):
   return enc_r, endpoints
 
 
-# ---------- public graph definition APIs ----------
+# ---------- public APIs for model graph definition ----------
 
 def gqn_draw(
     query_pose: tf.Tensor, target_frame: tf.Tensor,

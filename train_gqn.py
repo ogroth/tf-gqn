@@ -29,10 +29,10 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--dataset', type=str, default='rooms_ring_camera',
     help='The name of the GQN dataset to use. \
-    Available names are: \
-    jaco | mazes | rooms_free_camera_no_object_rotations | \
-    rooms_free_camera_with_object_rotations | rooms_ring_camera | \
-    shepard_metzler_5_parts | shepard_metzler_7_parts')
+      Available names are: \
+      jaco | mazes | rooms_free_camera_no_object_rotations | \
+      rooms_free_camera_with_object_rotations | rooms_ring_camera | \
+      shepard_metzler_5_parts | shepard_metzler_7_parts')
 ARGPARSER.add_argument(
     '--model_dir', type=str, default='models/gqn',
     help='The directory where the model will be stored.')

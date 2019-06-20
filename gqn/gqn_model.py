@@ -82,10 +82,10 @@ def gqn_draw_model_fn(features, labels, mode, params):
   ctx_size = params['gqn_params'].CONTEXT_SIZE
   seq_length = params['gqn_params'].SEQ_LENGTH
   # feature and label mapping according to gqn_input_fn
-  query_pose = features.query_camera
+  query_pose = features.query.query_camera
   target_frame = labels
-  context_poses = features.context.cameras
-  context_frames = features.context.frames
+  context_poses = features.query.context.cameras
+  context_frames = features.query.context.frames
   # graph setup
   net, ep_gqn = gqn_draw(
       query_pose=query_pose,

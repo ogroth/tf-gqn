@@ -127,13 +127,15 @@ def gqn_draw(
           representations=enc_r_broadcast,
           query_poses=query_pose,
           target_frames=target_frame,
-          sequence_size=seq_length,
+          # sequence_size=seq_length,
+          params=model_params,
       )
     else:
       mu_target, endpoints_rnn = generator_rnn(
           representations=enc_r_broadcast,
           query_poses=query_pose,
-          sequence_size=seq_length
+          # sequence_size=seq_length,
+          params=model_params,
       )
 
     endpoints.update(endpoints_rnn)

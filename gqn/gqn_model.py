@@ -155,7 +155,7 @@ def gqn_draw_model_fn(features, labels, mode, params):
         # 'target_image' : features.target,
     }
   # ELBO setup
-  if mode != tf.estimator.ModeKeys.PREDICT:
+  if mode == tf.estimator.ModeKeys.TRAIN:
     # collect intermediate endpoints
     mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
     for i in range(seq_length):

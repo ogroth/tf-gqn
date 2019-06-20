@@ -1,5 +1,5 @@
 """
-Quick test script to shape-check graph definition of GQN image generation with
+Test script to shape-check graph definition of GQN image generation with
 random toy data.
 """
 
@@ -33,7 +33,7 @@ scene_representation = tf.placeholder(
 mu_target, ep_generation = generator_rnn(
     representations=scene_representation,
     query_poses=query_pose,
-    sequence_size=_SEQ_LENGTH)
+    params=GQN_DEFAULT_CONFIG)
 
 # feed random input through the graph
 with tf.Session() as sess:

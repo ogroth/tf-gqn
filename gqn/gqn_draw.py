@@ -342,7 +342,7 @@ def generator_rnn(representations, query_poses, params,
     state = cell.zero_state(batch, tf.float32)
 
     # unroll generator LSTM
-    for step in range(sequence_size):
+    for step in range(params.SEQ_LENGTH):
       z = sample_z(state.lstm.h, scope="Sample_eta_pi")
       inputs = _GeneratorCellInput(representations, query_poses, z)
       with tf.name_scope("Generator"):
@@ -401,7 +401,7 @@ def inference_rnn(representations, query_poses, target_frames, params,
     gen_state = generator_cell.zero_state(batch, tf.float32)
 
     # unroll the LSTM cells
-    for step in range(sequence_size):
+    for step in range(params.SEQ_LENGTH):
 
       # TODO(ogroth): currently no variable sharing, remove?
       # generator and inference cell need to have the same variable scope

@@ -1,5 +1,5 @@
 """
-Quick test script to shape-check graph definition of GQN latent space
+Test script to shape-check graph definition of GQN latent space
 inference with random toy data.
 """
 
@@ -40,7 +40,7 @@ mu_target, ep_inference = inference_rnn(
     representations=scene_representation,
     query_poses=query_pose,
     target_frames=target_frame,
-    sequence_size=_SEQ_LENGTH)
+    params=GQN_DEFAULT_CONFIG)
 
 # feed random input through the graph
 with tf.Session() as sess:

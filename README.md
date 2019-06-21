@@ -1,5 +1,5 @@
 # tf-gqn
-![Flying through a scene generated from a single context image](gqn_demo.gif)
+![Flying through a scene based on GQN view interpolation](gqn_demo.gif)
 
 This repository contains a Tensorflow implementation of the *Generative Query Network (GQN)* described in 'Neural Scene Representation and Rendering' by Eslami et al. (2018).
 
@@ -32,19 +32,13 @@ If you use this repository, please cite the original publication:
 ```
 
 ## Software Requirements
-The code requires at least **Tensorflow 1.8.0**. It has been tested on the following platforms:
-
-- Ubuntu 16.04 kernel 4.15.0-24-generic with Python 3.5.2;
-- macOS Sierra 10.12.5 with Python 3.6.5
-- macOS High Sierra 10.13.6 with Python 3.5.2.
-
-	
 The major software requirements can be installed on an Ubuntu machine via:
 
 ```bash
 $ sudo apt-get install python3-pip python3-dev virtualenv
 ```
 
+The code requires at least **Tensorflow 1.12.0**.
 Also, in order to run the models efficiently on GPU, the latest NVIDIA drivers, CUDA and cuDNN frameworks which are compatible with Tensorflow should be installed  ([see version list](https://www.tensorflow.org/install/install_sources#tested_source_configurations)).
 
 
@@ -57,45 +51,68 @@ $ source venv/bin/activate
 (venv) $ pip3 install -r requirements.txt
 ```
 
-Additional requirements for development purposes can be found in ```dev_requirements.txt``` and can be added on demand.
-
-```bash
-(venv) $ pip3 install -r dev_requirements.txt
-```
-
 ## Training
 ### Training Data
 
-The data provider implementation is adapted from: [https://github.com/deepmind/gqn-datasets](https://github.com/deepmind/gqn-datasets)
+The [data provider](data_provider/gqn_provider.py) implementation is adapted from [https://github.com/deepmind/gqn-datasets](https://github.com/deepmind/gqn-datasets) and uses the more up-to-date `tf.data.dataset` input pipeline approach.
 
 The training datasets can be downloaded from: [https://console.cloud.google.com/storage/gqn-dataset](https://console.cloud.google.com/storage/gqn-dataset)
 
 To download the datasets you can use the [`gsutil cp`](https://cloud.google.com/storage/docs/gsutil/commands/cp) command; see also the `gsutil` [installation instructions](https://cloud.google.com/storage/docs/gsutil_install).
 
 ### Training Script
-The training script can be started with the following command, assuming the GQN datasets have been downloaded in `/tmp/data/gqn-dataset`:
+The [training script](train_gqn.py) can be started with the following command, assuming the GQN datasets are located in `data/gqn-dataset`:
 
 ```bash
-python3 train_gqn_draw.py \
-  --data_dir /tmp/data/gqn-dataset \
+(venv) $ python3 train_gqn.py \
+  --data_dir data/gqn-dataset \
   --dataset rooms_ring_camera \
-  --model_dir /tmp/models/gqn
+  --model_dir models/rooms_ring_camera/gqn
 ```
 
-For more verbose information (and summaries), you can pass the  `--debug` option to the script as well.
+For more verbose information (and tensorboard summaries), you can pass the  `--debug` option to the script as well.
 
-## Model Snapshots
-We provide the a few model snapshots we obtained during our debugging runs as a reference. We trained the GQN on a subset of ```rooms_ring_camera``` for about 220K steps with the ```Pool``` architecture for scene encoding and the ```DRAW``` architecture for rendering with a variable sequence length (2 through 12 generation steps).
-The [snapshots](http://shapestacks.robots.ox.ac.uk/static/download/tf-gqn/models/gqn_rooms_ring_debug.tar.gz) can be downloaded as ```tar.gz``` archive.
+### Tensorboard Summaries
+When the `--debug` flag is passed to the training script, image summaries will be written to the tensorboard records.
+During the training phase of the network, results from the inference network will be shown (`target_inference`). These images will resemble the target images relatively quickly but are _not_ indicative of model performance because they are computed with the posterior from the target images which are only available during training phase.
+During the evaluation phase of the network, results from the generator network will be shown (`target_generation`). These visual results indicate how well the GQN performs when deployed in prediction mode.
+
+## Deployment
+
+### tf.Estimator
+Using the tf.estimator API is the most basic form of using the GQN model.
+An estimator can be set up by passing the `gqn_draw_model_fn`, the model parameters and the path to the model directory with a corresponding snapshot. An [example](train_gqn.py#L170) can be found in the training script.
+Once the estimator is instantiated, it can be trained further (`model.train()`) or used for evaluation or prediction purposes (`model.eval()` or `model.predict()`).
+In evaluation and prediction mode, the generator is used.
+
+### GqnViewPredictor
+We provide a convenience wrapper around the `tf.estimator` with the [GqnViewPredictor class](gqn/gqn_predictor.py#L33).
+The view predictor can be set up by pointing to a model directory containing a model config (`gqn_config.json`) and a corresponding snapshot.
+The predictor features APIs to [add new context frames](gqn/gqn_predictor#L102) and [render a query view](gqn/gqn_predictor#L128) based on the currently loaded context.
+An example application of the view predictor class can be found in the [view interpolation notebook](notebooks/view_interpolation.ipynb).
+
+### [WIP] Model Snapshots
+Model snapshots for the `rooms` and `shepard_metzler` datasets will be uploaded as soon as training has finished. Stay tuned!
+
+## Jupyter Notebooks
+Jupyter notebooks for running examples of the data loader and view predictor can be found under [notebooks/](notebooks) and a jupyter server can be started with:
+```bash
+(venv) $ cd notebooks/
+(venv) $ jupyter notebook
+```
+
+### Dataset Viewer
+The [dataset viewer notebook](notebooks/gqn_dataset.ipynb) illustrates the use of the [gqn_input_fn](data_provider/gqn_provider.py#L189) and can be used to browse through the different GQN datasets.
+
+### View Interpolation Experiment
+The [view interpolation notebook](notebooks/view_interpolation.ipynb) illustrates the use of a [GqnViewPredictor](gqn/gqn_predictor.py#L33) and can be used to render an imagined flight through a scene as shown in [DeepMind's blog post](https://deepmind.com/blog/neural-scene-representation-and-rendering/).
 
 ## Notes
 A few random notes about this implementation:
 
-- The model has so far only been trained successfully on the ```rooms_ring_camera``` dataset of the GQN data repository.
 - We were not able to train the model with the learning rate scheme reported in the original paper (from 5\*10e-4 to 5\*10e-5 over 200K steps). This always resulted in a local minimum only generating light blue sky and a grey blob of background. We achieved good results by lowering all learning rates by one order of magnitude.
 - Currently, our implementation does not share the convolutional cores between the inference and generation LSTMs. With shared cores we observed the KL divergence between posterior and prior collapsing to zero frequently and obtained generally inferior results (which is in line with the results reported in the paper).
 - In our tests, we found eight generation steps to be a good trade-off between training stability, training speed and visual quality.
-- We have trained models on Titan Xp and GTX 1080Ti GPUs usually obtaining visually reasonable results after about one day of training.
 
 ## Authors
 

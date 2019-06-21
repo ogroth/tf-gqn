@@ -1,12 +1,12 @@
 """
-Quick test script to check correct save and restore functionality of GQN model.
+Test script to check correct save and restore functionality of GQN model.
 """
 
 import os
 import sys
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
-TF_GQN_HOME = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
-sys.path.append(TF_GQN_HOME)
+TF_GQN_ROOT = os.path.abspath(os.path.join(SCRIPT_PATH, '..'))
+sys.path.append(TF_GQN_ROOT)
 
 import tensorflow as tf
 import numpy as np
@@ -14,6 +14,9 @@ import numpy as np
 from gqn.gqn_params import GQN_DEFAULT_CONFIG
 from gqn.gqn_graph import gqn_draw
 
+# directory setup
+MODEL_ROOT_PATH = os.path.join(TF_GQN_ROOT, 'tmp', 'tests', 'gqn-test_save_restore')
+os.makedirs(MODEL_ROOT_PATH, exist_ok=True)
 
 # constants
 _BATCH_SIZE = 1
@@ -80,7 +83,7 @@ with tf.Session() as sess:
           context_poses: rnd_context_poses,
           context_frames: rnd_context_frames,
       })
-  saver.save(sess, save_path="/tmp/gqn_test_checkpoint")
+  saver.save(sess, save_path=os.path.join(MODEL_ROOT_PATH, 'test_save_restore'))
 
 print("Saved model!")
 
@@ -106,7 +109,7 @@ saver = tf.train.Saver()
 with tf.Session() as sess:
   # Don't run initalisers, restore variables instead
   # sess.run(tf.global_variables_initializer())
-  saver.restore(sess, save_path="/tmp/gqn_test_checkpoint")
+  saver.restore(sess, save_path=os.path.join(MODEL_ROOT_PATH, 'test_save_restore'))
 
   # Run network forward, shouldn't complain about uninitialised variables
   sess.run(

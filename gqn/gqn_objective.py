@@ -10,8 +10,12 @@ from typing import List
 import tensorflow as tf
 
 
+# ---------- ad-hoc data types ----------
+
 TfTensorList = List[tf.Tensor]
 
+
+# ---------- public APIs for objective graph definition ----------
 
 def gqn_draw_elbo(
     mu_target: tf.Tensor, sigma_target: tf.Tensor,
@@ -20,7 +24,7 @@ def gqn_draw_elbo(
     target_frame: tf.Tensor,
     scope='GQN_DRAW_ELBO'):
   """
-  Defines the ELBO of the GQN graph.
+  Defines the ELBO objective of the GQN graph.
 
   Arguments:
     mu_target: The mean parameterizing the final image sampling.
@@ -77,6 +81,8 @@ def gqn_vae_elbo(
     target_frame: tf.Tensor,
     scope='GQN_VAE_ELBO'):
   """
+  [WIP] This GQN version is currently not maintained!
+  
   Defines the ELBO of the GQN-VAE baseline graph.
 
   Arguments:

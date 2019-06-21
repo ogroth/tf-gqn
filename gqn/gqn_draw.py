@@ -312,7 +312,7 @@ class InferenceLSTMCell(tf.contrib.rnn.RNNCell):
     return _InferenceCellOutput(output), _InferenceCellState(new_state)
 
 
-def generator_rnn(representations, query_poses, sequence_size=12,
+def generator_rnn(representations, query_poses, params,
                   scope="GQN_RNN"):
   """
   Creates the computational graph for the DRAW module in generation mode.
@@ -325,10 +325,10 @@ def generator_rnn(representations, query_poses, sequence_size=12,
   height, width = dim_r[1], dim_r[2]
 
   cell = GeneratorLSTMCell(
-      input_shape=[height, width, GQN_DEFAULT_CONFIG.GENERATOR_INPUT_CHANNELS],
-      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
-      canvas_channels=GQN_DEFAULT_CONFIG.LSTM_CANVAS_CHANNELS,
-      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, params.GENERATOR_INPUT_CHANNELS],
+      output_channels=params.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=params.LSTM_CANVAS_CHANNELS,
+      kernel_size=params.LSTM_KERNEL_SIZE,
       name="GeneratorCell")
 
   outputs = []
@@ -342,7 +342,7 @@ def generator_rnn(representations, query_poses, sequence_size=12,
     state = cell.zero_state(batch, tf.float32)
 
     # unroll generator LSTM
-    for step in range(sequence_size):
+    for step in range(params.SEQ_LENGTH):
       z = sample_z(state.lstm.h, scope="Sample_eta_pi")
       inputs = _GeneratorCellInput(representations, query_poses, z)
       with tf.name_scope("Generator"):
@@ -358,13 +358,13 @@ def generator_rnn(representations, query_poses, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1].canvas
 
-  mu_target = eta_g(target_canvas, channels=GQN_DEFAULT_CONFIG.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=params.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints
 
 
-def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
+def inference_rnn(representations, query_poses, target_frames, params,
                   scope="GQN_RNN"):
   """
   Creates the computational graph for the DRAW module in inference mode.
@@ -377,15 +377,15 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
   height, width = dim_r[1], dim_r[2]
 
   generator_cell = GeneratorLSTMCell(
-      input_shape=[height, width, GQN_DEFAULT_CONFIG.GENERATOR_INPUT_CHANNELS],
-      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
-      canvas_channels=GQN_DEFAULT_CONFIG.LSTM_CANVAS_CHANNELS,
-      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, params.GENERATOR_INPUT_CHANNELS],
+      output_channels=params.LSTM_OUTPUT_CHANNELS,
+      canvas_channels=params.LSTM_CANVAS_CHANNELS,
+      kernel_size=params.LSTM_KERNEL_SIZE,
       name="GeneratorCell")
   inference_cell = InferenceLSTMCell(
-      input_shape=[height, width, GQN_DEFAULT_CONFIG.INFERENCE_INPUT_CHANNELS],
-      output_channels=GQN_DEFAULT_CONFIG.LSTM_OUTPUT_CHANNELS,
-      kernel_size=GQN_DEFAULT_CONFIG.LSTM_KERNEL_SIZE,
+      input_shape=[height, width, params.INFERENCE_INPUT_CHANNELS],
+      output_channels=params.LSTM_OUTPUT_CHANNELS,
+      kernel_size=params.LSTM_KERNEL_SIZE,
       name="InferenceCell")
 
   outputs = []
@@ -401,7 +401,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     gen_state = generator_cell.zero_state(batch, tf.float32)
 
     # unroll the LSTM cells
-    for step in range(sequence_size):
+    for step in range(params.SEQ_LENGTH):
 
       # TODO(ogroth): currently no variable sharing, remove?
       # generator and inference cell need to have the same variable scope
@@ -443,7 +443,7 @@ def inference_rnn(representations, query_poses, target_frames, sequence_size=12,
     # compute final mu tensor parameterizing sampling of target frame
     target_canvas = outputs[-1][1].canvas
 
-  mu_target = eta_g(target_canvas, channels=GQN_DEFAULT_CONFIG.IMG_CHANNELS, scope="eta_g")
+  mu_target = eta_g(target_canvas, channels=params.IMG_CHANNELS, scope="eta_g")
   endpoints['mu_target'] = mu_target
 
   return mu_target, endpoints

@@ -1,5 +1,6 @@
 """
-Contains VAE decoders for GQN.
+[WIP] Contains VAE decoders for GQN.
+Currently under development, use at yor own risk!
 """
 
 from __future__ import absolute_import
@@ -90,7 +91,6 @@ def vae_tower_decoder(
 
     net = tf.layers.conv2d(net, filters=256, kernel_size=3, strides=1,
                            padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
     net = net + skip1
 
     net = tf.layers.conv2d(net, filters=256, kernel_size=2, strides=2,
@@ -105,7 +105,6 @@ def vae_tower_decoder(
                              padding="SAME", activation=None)
     net = tf.layers.conv2d(net, filters=128, kernel_size=3, strides=1,
                            padding="SAME", activation=tf.nn.relu)
-    # TODO(ogroth): correct implementation for the skip connection?
     net = net + skip2
 
     net = tf.layers.conv2d(net, filters=256, kernel_size=3, strides=1,

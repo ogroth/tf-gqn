@@ -151,4 +151,4 @@ def debug_canvas_image_mean(canvases, eta_g_scope='GQN'):
       mean_images.append(eta_g(canvas))
       mean_images.append(white_vertical_bar)
 
-    return tf.concat(mean_images[:-1], axis=-2, name='MakeGrid')
+    return tf.concat(mean_images[:-1], axis=-2, name='canvas_grid')

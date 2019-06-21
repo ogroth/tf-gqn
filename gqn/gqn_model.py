@@ -15,6 +15,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import tensorflow as tf
 
 from .gqn_graph import gqn_draw, gqn_vae
@@ -22,6 +23,8 @@ from .gqn_objective import gqn_draw_elbo, gqn_vae_elbo
 from .gqn_params import GQNConfig, GQN_DEFAULT_PARAM_DICT
 from .gqn_utils import debug_canvas_image_mean
 
+
+# ---------- internal helper functions ----------
 
 def _linear_noise_annealing(gqn_params: GQNConfig) -> tf.Tensor:
   """
@@ -52,16 +55,22 @@ def _linear_lr_annealing(gqn_params: GQNConfig) -> tf.Tensor:
   return lr
 
 
+# ---------- public model_fns returning EstimatorSpecs ----------
+
 def gqn_draw_model_fn(features, labels, mode, params):
   """
   Defines an tf.estimator.EstimatorSpec for the GQN model.
 
   Args:
-    features: Query = collections.namedtuple('Query', ['context', 'query_camera'])
-    labels: tf.Tensor of the target image
+    features:
+      TaskData = collections.namedtuple('TaskData', ['query', 'target'])
+      - Query = collections.namedtuple('Query', ['context', 'query_camera'])
+      - Context = collections.namedtuple('Context', ['frames', 'cameras'])
+    labels: tf.Tensor of the target image (= TaskData.target)
     mode:
     params:
-      gqn_params: _GQNParams type containing the model parameters
+      gqn_params: GQNConfig type containing the model parameters
+      model_dir: directory where parameters and snapshots are stored
       debug: bool; if true, model will produce additional debug output
         tensorboard summaries for image generation process
 
@@ -72,13 +81,11 @@ def gqn_draw_model_fn(features, labels, mode, params):
   # shorthand notations for parameters
   ctx_size = params['gqn_params'].CONTEXT_SIZE
   seq_length = params['gqn_params'].SEQ_LENGTH
-
   # feature and label mapping according to gqn_input_fn
-  query_pose = features.query_camera
+  query_pose = features.query.query_camera
   target_frame = labels
-  context_poses = features.context.cameras
-  context_frames = features.context.frames
-
+  context_poses = features.query.context.cameras
+  context_frames = features.query.context.frames
   # graph setup
   net, ep_gqn = gqn_draw(
       query_pose=query_pose,
@@ -86,59 +93,76 @@ def gqn_draw_model_fn(features, labels, mode, params):
       context_poses=context_poses,
       context_frames=context_frames,
       model_params=params['gqn_params'],
-      is_training=(mode != tf.estimator.ModeKeys.PREDICT)
+      is_training=(mode == tf.estimator.ModeKeys.TRAIN)
   )
-
-  # outputs: sampled images
+  # outputs: mean images
   mu_target = net
   sigma_target = _linear_noise_annealing(params['gqn_params'])
-  target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
-  target_sample = tf.identity(target_normal.sample(), name='target_sample')
-  l2_reconstruction = tf.identity(
-      tf.metrics.mean_squared_error(
-          labels=target_frame,
-          predictions=mu_target),
-      name='l2_reconstruction')
+  # target_normal = tf.distributions.Normal(loc=mu_target, scale=sigma_target)
+  # target_sample = tf.identity(target_normal.sample(), name='target_sample')
+  if mode != tf.estimator.ModeKeys.PREDICT:
+    l2_reconstruction = tf.identity(
+        tf.metrics.mean_squared_error(
+            labels=target_frame,
+            predictions=mu_target),
+        name='l2_reconstruction')
   # write out image summaries in debug mode
   if params['debug']:
+    # context frames
+    ctx_frames = []
+    ctx_shape = tf.shape(context_frames)
+    batch, height = ctx_shape[0], ctx_shape[2]
+    white_vertical_bar = tf.ones(
+        shape=(batch, height, 2, 3), dtype=tf.float32, name='ctx_separator')
     for i in range(ctx_size):
+      ctx_frames.append(context_frames[:, i])
+      ctx_frames.append(white_vertical_bar)
+    tf.summary.image(
+        name='context_frames',
+        tensor=tf.concat(ctx_frames, axis=-2, name='context_grid'),
+        max_outputs=1
+    )
+    # target images
+    tf.summary.image(
+        name='target_frame',
+        tensor=target_frame,
+        max_outputs=1
+    )
+    # show inference results during training phase
+    if mode == tf.estimator.ModeKeys.TRAIN:
+      tf.summary.scalar(name='l2_reconstruction_train', tensor=l2_reconstruction[1])
       tf.summary.image(
-          'context_frame_%d' % (i + 1),
-          context_frames[:, i],
+          name='target_inference',
+          tensor=mu_target,
           max_outputs=1
       )
-    tf.summary.image(
-        'target_images',
-        labels,
-        max_outputs=1
-    )
-    tf.summary.image(
-        'target_means',
-        mu_target,
-        max_outputs=1
-    )
-    tf.summary.scalar(
-        'l2_reconstruction',
-        l2_reconstruction[1]
-    )
-    generator_sequence = debug_canvas_image_mean(
+    # show generation results during evaluation phase
+    if mode == tf.estimator.ModeKeys.EVAL:
+      tf.summary.scalar(name='l2_reconstruction_eval', tensor=l2_reconstruction[1])
+      tf.summary.image(
+          name='target_generation',
+          tensor=mu_target,
+          max_outputs=1
+      )
+    # debug visualization of DRAW sequence
+    draw_sequence = debug_canvas_image_mean(
         [ep_gqn['canvas_{}'.format(i)] for i in range(seq_length)]
     )
     tf.summary.image(
-        'generator_sequence_mean',
-        generator_sequence,
+        'draw_sequence',
+        draw_sequence,
         max_outputs=1
     )
-
   # predictions to make when deployed during test time
   if mode == tf.estimator.ModeKeys.PREDICT:
     predictions = {
-        'predicted_mean' : mu_target,
-        'predicted_variance' : sigma_target,
+        'scenario_name' : features.meta.scenario_name,
+        'query_pose' : query_pose,
+        'target_prediction' : mu_target,
+        # 'target_image' : features.target,
     }
-
   # ELBO setup
-  if mode != tf.estimator.ModeKeys.PREDICT:
+  if mode == tf.estimator.ModeKeys.TRAIN:
     # collect intermediate endpoints
     mu_q, sigma_q, mu_pi, sigma_pi = [], [], [], []
     for i in range(seq_length):
@@ -160,7 +184,6 @@ def gqn_draw_model_fn(features, labels, mode, params):
           name='kl_regularizer',
           tensor=ep_elbo['kl_regularizer']
       )
-
   # optimization
   if mode == tf.estimator.ModeKeys.TRAIN:
     lr = _linear_lr_annealing(params['gqn_params'])
@@ -169,15 +192,18 @@ def gqn_draw_model_fn(features, labels, mode, params):
         loss=elbo,
         global_step=tf.train.get_global_step()
     )
-
-  # evaluation metrics to monitor
+    if params['debug']:
+      tf.summary.scalar(name='learning_rate', tensor=lr)
+  # evaluation metrics and summaries
   if mode == tf.estimator.ModeKeys.EVAL:
     eval_metric_ops = {
-        'l2_reconstruction' : tf.metrics.mean_squared_error(
-            labels=target_frame,
-            predictions=mu_target)
+        'l2_reconstruction_eval' : tf.metrics.mean_squared_error(
+            labels=target_frame, predictions=mu_target),
     }
-
+    eval_summary_hook = tf.train.SummarySaverHook(
+        save_steps=1, output_dir=os.path.join(params['model_dir'], 'eval'),
+        summary_op=tf.summary.merge_all())
+    eval_hooks = [eval_summary_hook]
   # create SpecSheet
   if mode == tf.estimator.ModeKeys.TRAIN:
     estimator_spec = tf.estimator.EstimatorSpec(
@@ -187,8 +213,10 @@ def gqn_draw_model_fn(features, labels, mode, params):
   if mode == tf.estimator.ModeKeys.EVAL:
     estimator_spec = tf.estimator.EstimatorSpec(
         mode=mode,
-        loss=elbo,
-        eval_metric_ops=eval_metric_ops)
+        # loss=elbo,
+        loss=tf.zeros(1),  # dummy-loss, since generator is used and KL can't be computed
+        eval_metric_ops=eval_metric_ops,
+        evaluation_hooks=eval_hooks)
   if mode == tf.estimator.ModeKeys.PREDICT:
     estimator_spec = tf.estimator.EstimatorSpec(
         mode=mode,
@@ -197,8 +225,12 @@ def gqn_draw_model_fn(features, labels, mode, params):
   return estimator_spec
 
 
+# ---------- WIP ----------
+
 def gqn_draw_identity_model_fn(features, labels, mode, params):
   """
+  [WIP] Currently not maintained!
+
   Defines an tf.estimator.EstimatorSpec for the GQN model.
   Debug version of the model function learning an identity between input and
   output image.
@@ -350,6 +382,8 @@ def gqn_draw_identity_model_fn(features, labels, mode, params):
 
 def gqn_vae_model_fn(features, labels, mode, params):
   """
+  [WIP] Currently not maintained!
+
   Defines an tf.estimator.EstimatorSpec for the GQN-VAE baseline model.
 
   Args:

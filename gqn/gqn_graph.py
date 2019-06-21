@@ -105,7 +105,6 @@ def gqn_draw(
   dim_h_enc = model_params.ENC_HEIGHT
   dim_w_enc = model_params.ENC_WIDTH
   dim_c_enc = model_params.ENC_CHANNELS
-  seq_length = model_params.SEQ_LENGTH
 
   with tf.variable_scope(scope):
     endpoints = {}
@@ -127,14 +126,12 @@ def gqn_draw(
           representations=enc_r_broadcast,
           query_poses=query_pose,
           target_frames=target_frame,
-          # sequence_size=seq_length,
           params=model_params,
       )
     else:
       mu_target, endpoints_rnn = generator_rnn(
           representations=enc_r_broadcast,
           query_poses=query_pose,
-          # sequence_size=seq_length,
           params=model_params,
       )
 

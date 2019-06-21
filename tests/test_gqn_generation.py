@@ -12,16 +12,27 @@ sys.path.append(TF_GQN_HOME)
 import tensorflow as tf
 import numpy as np
 
-from gqn.gqn_params import GQN_DEFAULT_CONFIG
+from gqn.gqn_params import create_gqn_config
 from gqn.gqn_draw import generator_rnn
 
-# constants
+# config
+img_size = 128
+custom_params = {
+    'IMG_HEIGHT' : img_size,
+    'IMG_WIDTH' : img_size,
+    'ENC_HEIGHT' : img_size // 4,  # must be 1/4 of target frame height
+    'ENC_WIDTH' : img_size // 4,  # must be 1/4 of target frame width
+}
+gqn_config = create_gqn_config(custom_params)
 _BATCH_SIZE = 1
-_DIM_POSE = GQN_DEFAULT_CONFIG.POSE_CHANNELS
-_DIM_R_H = GQN_DEFAULT_CONFIG.ENC_HEIGHT
-_DIM_R_W = GQN_DEFAULT_CONFIG.ENC_WIDTH
-_DIM_R_C = GQN_DEFAULT_CONFIG.ENC_CHANNELS
-_SEQ_LENGTH = 2
+_DIM_POSE = gqn_config.POSE_CHANNELS
+_DIM_H_IMG = gqn_config.IMG_HEIGHT
+_DIM_W_IMG = gqn_config.IMG_WIDTH
+_DIM_C_IMG = gqn_config.IMG_CHANNELS
+_DIM_R_H = gqn_config.ENC_HEIGHT
+_DIM_R_W = gqn_config.ENC_WIDTH
+_DIM_R_C = gqn_config.ENC_CHANNELS
+_SEQ_LENGTH = gqn_config.SEQ_LENGTH
 
 # input placeholders
 query_pose = tf.placeholder(
@@ -33,7 +44,7 @@ scene_representation = tf.placeholder(
 mu_target, ep_generation = generator_rnn(
     representations=scene_representation,
     query_poses=query_pose,
-    params=GQN_DEFAULT_CONFIG)
+    params=gqn_config)
 
 # feed random input through the graph
 with tf.Session() as sess:

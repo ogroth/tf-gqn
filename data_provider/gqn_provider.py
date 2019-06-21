@@ -11,7 +11,6 @@ from __future__ import print_function
 import collections
 import os
 import tensorflow as tf
-nest = tf.contrib.framework.nest
 
 
 # ---------- ad-hoc data structures ----------

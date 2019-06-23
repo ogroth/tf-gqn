@@ -46,6 +46,9 @@ ARGPARSER.add_argument(
 ARGPARSER.add_argument(
     '--img_size', type=int, default=64,
     help='Height and width of the squared input images.')
+ARGPARSER.add_argument(
+    '--enc_type', type=str, default='pool',
+    help='The encoding architecture type.')
 # solver parameters
 ARGPARSER.add_argument(
     '--adam_lr_alpha', type=float, default=5*10e-5,
@@ -152,6 +155,7 @@ def main(unparsed_argv):
         'IMG_WIDTH' : ARGS.img_size,
         'CONTEXT_SIZE' : ARGS.context_size,
         'SEQ_LENGTH' : ARGS.seq_length,
+        'ENC_TYPE' : ARGS.enc_type,
         'ENC_HEIGHT' : ARGS.img_size // 4,  # must be 1/4 of target frame height
         'ENC_WIDTH' : ARGS.img_size // 4,  # must be 1/4 of target frame width
         'ADAM_LR_ALPHA' : ARGS.adam_lr_alpha,

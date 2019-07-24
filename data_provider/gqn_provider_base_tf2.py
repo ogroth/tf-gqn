@@ -93,10 +93,39 @@ def _convert_frame_data(jpeg_data):
 class EagerDataReader(object):
     """Minimal eager TFRecord reader for Tensorflow >2.0b.
 
-    You can use this reader to load the datasets used to train Generative Query
-    Networks (GQNs) in the 'Neural Scene Representation and Rendering' paper.
-    See README.md for a description of the datasets and an example of how to use
-    the reader.
+  Creates a tf.data.Dataset based op that returns data.
+    Args:
+      dataset_name: string, one of ['jaco', 'mazes', 'rooms_ring_camera',
+          'rooms_free_camera_no_object_rotations',
+          'rooms_free_camera_with_object_rotations', 'shepard_metzler_5_parts',
+          'shepard_metzler_7_parts'].
+      root: string, path to the root folder of the data.
+      mode: one of tf.estimator.ModeKeys.
+      context_size: integer, number of views to be used to assemble the context.
+      batch_size: (optional) batch size, defaults to 1.
+      num_epochs: (optional) number of times to go through the dataset,
+          defaults to 1.
+      custom_frame_size: (optional) integer, required size of the returned
+          frames, defaults to None.
+      num_threads: (optional) integer, number of threads used to read and parse
+          the record files, defaults to 4.
+      buffer_size: (optional) integer, capacity of the underlying prefetch or
+          shuffle buffer, defaults to 256.
+      seed: (optional) integer, seed for the random number generators used in
+          the dataset.
+
+    Returns:
+      tf.data.dataset yielding tuples of the form (features, labels)
+      shapes:
+        features.query.context.cameras: [N, K, 7]
+        features.query.context.frames: [N, K, H, W, 3]
+        features.query.query_camera: [N, 7]
+        features.target (same as labels): [N, H, W, 3]
+
+    Raises:
+      ValueError: if the required version does not exist; if the required mode
+         is not supported; if the requested context_size is bigger than the
+         maximum supported for the given dataset version.
     """
 
     def __init__(
@@ -140,6 +169,7 @@ class EagerDataReader(object):
 
         self.seed = seed
         self._context_size = context_size
+
         # Number of views in the context + target view
         self._example_size = context_size + 1
         self._custom_frame_size = custom_frame_size
@@ -188,8 +218,14 @@ class EagerDataReader(object):
     def _preprocess(self, example):
         """Preprocess raw frames and cameras from parsed tfrecord"""
 
-        frames = self._preprocess_frames(example, self.indices)
-        cameras = self._preprocess_cameras(example, self.indices)
+        frames = self._preprocess_frames(
+            example,
+            self.indices,
+            self._example_size,
+            self._dataset_info,
+            self._custom_frame_size,
+        )
+        cameras = self._preprocess_cameras(example, self.indices, self._dataset_info)
 
         return frames, cameras
 
@@ -201,8 +237,11 @@ class EagerDataReader(object):
         indices = tf.slice(indices, begin=[0], size=[self._example_size])
         return indices
 
-    def _preprocess_frames(self, example, indices):
+    def _preprocess_frames(
+        self, example, indices, example_size, dataset_info, custom_frame_size
+    ):
         """Instantiates the ops used to preprocess the frames data."""
+
         frames = tf.concat(example["frames"], axis=0)
         frames = tf.gather(frames, indices, axis=0)
         frames = tf.map_fn(
@@ -212,34 +251,30 @@ class EagerDataReader(object):
             back_prop=False,
         )
         dataset_image_dimensions = tuple(
-            [self._dataset_info.frame_size] * 2 + [_NUM_CHANNELS]
+            [dataset_info.frame_size] * 2 + [_NUM_CHANNELS]
         )
-        frames = tf.reshape(frames, (-1, self._example_size) + dataset_image_dimensions)
-        if (
-            self._custom_frame_size
-            and self._custom_frame_size != self._dataset_info.frame_size
-        ):
-            frames = tf.reshape(frames, (-1,) + dataset_image_dimensions)
-            new_frame_dimensions = (self._custom_frame_size,) * 2 + (_NUM_CHANNELS,)
-            frames = tf.image.resize(
-                frames, new_frame_dimensions[:2], method=tf.image.ResizeMethod.BILINEAR
+        frames = tf.reshape(frames, (example_size,) + dataset_image_dimensions)
+        if custom_frame_size and custom_frame_size != dataset_info.frame_size:
+            frames = tf.reshape(frames, dataset_image_dimensions)
+            new_frame_dimensions = (custom_frame_size,) * 2 + (_NUM_CHANNELS,)
+            frames = tf.image.resize_bilinear(
+                frames, new_frame_dimensions[:2], align_corners=True
             )
-            frames = tf.reshape(frames, (-1, self._example_size) + new_frame_dimensions)
+            frames = tf.reshape(frames, (-1, example_size) + new_frame_dimensions)
+
         return frames
 
-    def _preprocess_cameras(self, example, indices):
+    def _preprocess_cameras(self, example, indices, dataset_info):
         """Instantiates the ops used to preprocess the cameras data."""
         raw_pose_params = example["cameras"]
         raw_pose_params = tf.reshape(
-            raw_pose_params,
-            [-1, self._dataset_info.sequence_size, _NUM_RAW_CAMERA_PARAMS],
+            raw_pose_params, [dataset_info.sequence_size, _NUM_RAW_CAMERA_PARAMS]
         )
-        raw_pose_params = tf.gather(raw_pose_params, indices, axis=1)
-        pos = raw_pose_params[:, :, 0:3]
-        yaw = raw_pose_params[:, :, 3:4]
-        pitch = raw_pose_params[:, :, 4:5]
+        raw_pose_params = tf.gather(raw_pose_params, indices, axis=0)
+        pos = raw_pose_params[:, 0:3]
+        yaw = raw_pose_params[:, 3:4]
+        pitch = raw_pose_params[:, 4:5]
         cameras = tf.concat(
-            [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=2
+            [pos, tf.sin(yaw), tf.cos(yaw), tf.sin(pitch), tf.cos(pitch)], axis=-1
         )
-
         return cameras

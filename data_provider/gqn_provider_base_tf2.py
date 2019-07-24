@@ -192,10 +192,10 @@ class EagerDataReader(object):
 
     def _prepare(self, frames, cameras):
         """Reads batch_size (query, target) pairs."""
-        context_frames = frames[:, :-1]
-        context_cameras = cameras[:, :-1]
-        target = frames[:, -1]
-        query_camera = cameras[:, -1]
+        context_frames = frames[:-1]
+        context_cameras = cameras[:-1]
+        target = frames[-1]
+        query_camera = cameras[-1]
         context = Context(cameras=context_cameras, frames=context_frames)
         query = Query(context=context, query_camera=query_camera)
 

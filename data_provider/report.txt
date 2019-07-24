@@ -1,0 +1,34 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 2 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: gqn_provider_base.py
+--------------------------------------------------------------------------------
+gqn_provider_base.py:24:7: ERROR: Using member tf.contrib.framework.nest in deprecated module tf.contrib. tf.contrib.framework.nest cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+gqn_provider_base.py:249:15: WARNING: tf.image.resize_bilinear called with align_corners argument, requires manual check: align_corners is not supported by tf.image.resize, the new default transformation is close to what v1 provided. If you require exactly the same transformation as before, use compat.v1.image.resize_bilinear.
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'gqn_provider_base.py'
+ outputting to 'gqn_provider_base_tf2.py'
+--------------------------------------------------------------------------------
+
+24:7: ERROR: Using member tf.contrib.framework.nest in deprecated module tf.contrib. tf.contrib.framework.nest cannot be converted automatically. tf.contrib will not be distributed with TensorFlow 2.0, please consider an alternative in non-contrib TensorFlow, a community-maintained repository such as tensorflow/addons, or fork the required code.
+181:23: INFO: Renamed 'tf.train.string_input_producer' to 'tf.compat.v1.train.string_input_producer'
+182:15: INFO: Renamed 'tf.TFRecordReader' to 'tf.compat.v1.TFRecordReader'
+190:20: INFO: Renamed 'tf.RandomShuffleQueue' to 'tf.queue.RandomShuffleQueue'
+198:6: INFO: Renamed 'tf.train.add_queue_runner' to 'tf.compat.v1.train.add_queue_runner'
+198:32: INFO: Renamed 'tf.train.QueueRunner' to 'tf.compat.v1.train.QueueRunner'
+215:18: INFO: Renamed 'tf.FixedLenFeature' to 'tf.io.FixedLenFeature'
+217:19: INFO: Renamed 'tf.FixedLenFeature' to 'tf.io.FixedLenFeature'
+221:14: INFO: Added keywords to args of function 'tf.parse_example'
+221:14: INFO: Renamed 'tf.parse_example' to 'tf.io.parse_example'
+230:14: INFO: Renamed 'tf.random_shuffle' to 'tf.random.shuffle'
+249:15: WARNING: tf.image.resize_bilinear called with align_corners argument, requires manual check: align_corners is not supported by tf.image.resize, the new default transformation is close to what v1 provided. If you require exactly the same transformation as before, use compat.v1.image.resize_bilinear.
+249:15: INFO: Changed tf.image.resize_bilinear call to tf.image.resize(..., method=tf.image.ResizeMethod.BILINEAR).
+--------------------------------------------------------------------------------
+

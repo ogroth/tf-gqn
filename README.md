@@ -91,8 +91,14 @@ The view predictor can be set up by pointing to a model directory containing a m
 The predictor features APIs to [add new context frames](gqn/gqn_predictor#L102) and [render a query view](gqn/gqn_predictor#L128) based on the currently loaded context.
 An example application of the view predictor class can be found in the [view interpolation notebook](notebooks/view_interpolation.ipynb).
 
-### [WIP] Model Snapshots
-Model snapshots for the `rooms` and `shepard_metzler` datasets will be uploaded as soon as training has finished. Stay tuned!
+### Model Snapshots
+Model snapshots for the following GQN datasets are available:
+- [`shepard_metzler_5_parts.tar.gz`](https://shapestacks.robots.ox.ac.uk/static/download/tf-gqn/models/shepard_metzler_5_parts.tar.gz)
+- [`shepard_metzler_7_parts.tar.gz`](https://shapestacks.robots.ox.ac.uk/static/download/tf-gqn/models/shepard_metzler_7_parts.tar.gz)
+
+In order to use a snapshot, just download the archive and unpack it into the 'models' sub-directory of this repository (which is the default path for all scripts and notebooks to use them).
+
+Each snapshot directory also contains `*-runcmd.json` and `gqn_config.json` files detailing all training settings and model hyper-parameters. You can also run `tensorboard` on the `models` directory to display all summaries which have been tracked during the model training runs.
 
 ## Jupyter Notebooks
 Jupyter notebooks for running examples of the data loader and view predictor can be found under [notebooks/](notebooks) and a jupyter server can be started with:

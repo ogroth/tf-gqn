@@ -110,11 +110,11 @@ def _get_dataset_files(dataset_info, mode, root):
       for i in range(1, num_files + 1)]
   return record_paths
 
-def _get_randomized_indices(context_size, dataset_info):
+def _get_randomized_indices(context_size, dataset_info, seed):
   """Generates randomized indices into a sequence of a specific length."""
   example_size = context_size + 1
   indices = tf.range(0, dataset_info.sequence_size)
-  indices = tf.random_shuffle(indices)
+  indices = tf.random_shuffle(indices, seed=seed)
   indices = tf.slice(indices, begin=[0], size=[example_size])
   return indices
 
@@ -264,7 +264,7 @@ def gqn_input_fn(
       lambda raw_data: _parse(raw_data, dataset_info),
       num_parallel_calls=num_threads)
   # preprocess into context and target
-  indices = _get_randomized_indices(context_size, dataset_info)
+  indices = _get_randomized_indices(context_size, dataset_info, seed)
   dataset = dataset.map(
       lambda example: _preprocess(example, indices, context_size, custom_frame_size, dataset_info),
       num_parallel_calls=num_threads)

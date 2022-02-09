@@ -57,7 +57,7 @@ rope==0.14.0
 Send2Trash==1.5.0
 six==1.12.0
 tensorboard==1.12.2
-tensorflow-gpu==1.12.2
+tensorflow-gpu==2.5.3
 termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.2
